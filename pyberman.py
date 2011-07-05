@@ -30,6 +30,7 @@ class Game(object):
         pygame.init()
         pygame.display.set_caption('Pyberman')
         self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
+        self.level = None
 
     def __del__(self):
         """Deinitializes the game."""
@@ -44,20 +45,18 @@ class Game(object):
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
-                self.level.update()
+            self.level.update()
             self.surface.fill((100,100,100))
             self.level.draw(self.surface)
-            self.surface.flip()
+            pygame.display.flip()
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
 
     @classmethod
     def instance(cls):
-        if cls._instance is not None:
-            return cls._instance
-        else:
+        if cls._instance is None:
             cls._instance=Game()
-            return cls._instance
+        return cls._instance
 
 if __name__=="__main__":
     Game.instance().main_loop()
