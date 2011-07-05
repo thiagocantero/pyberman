@@ -5,6 +5,7 @@
 
 import sys
 import pygame
+import ctypes
 from pygame.locals import *
 import GameObjects
 
@@ -17,8 +18,8 @@ class Game(object):
     #Todo: implement reading from a config file
     config = {
         'screen': {
-            'width': 800, 
-            'height': 600,
+            'width': ctypes.windll.user32.GetSystemMetrics(0), 
+            'height': ctypes.windll.user32.GetSystemMetrics(1),
             },
         'general': {
             'framerate': 50,
@@ -39,7 +40,7 @@ class Game(object):
     def main_loop(self):
         """Starts the game's main loop."""
         #Todo: load a this actually should be done when users selects the level in the GUI
-        self.level = GameObjects.Level('D:\\projects\\pyberman\\Maps\\map1.bff')
+        self.level = GameObjects.Level('Maps\\map1.bff')
         #to control a framerate
         clock = pygame.time.Clock()
         while True:
