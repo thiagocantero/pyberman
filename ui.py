@@ -1,7 +1,10 @@
+import sys
 import pygame
+from pygame.locals import *
+import glob
+import os
 from gameobjects import GameObject 
 
-     
 class Menu(GameObject):
     '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
         It's a class which is responsible for creating GameObject called Menu, which will
@@ -17,6 +20,7 @@ class Menu(GameObject):
         self.str_func=str_func
         self.title  = title
         self.text_size = 50
+        self.menu_length=len(self.str_func)
         super(Menu, self).__init__(game, 0, 0, groups=[game.all])
         self.background = self.load_image('menu.jpg')
         self.image=pygame.Surface((self.width,self.height))
@@ -24,8 +28,8 @@ class Menu(GameObject):
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
         self.rect = pygame.rect.Rect(0, 0, self.width, self.height)
         #abs_height is computed in the way that all items of menu would be centralized
-        self.abs_height=(self.height-len(self.str_func)*self.text_size)//2
-        self.current=1
+        self.abs_height=(self.height-self.menu_length*self.text_size)//2
+        self.current=0
         
     @property
     def width(self):
@@ -42,8 +46,23 @@ class Menu(GameObject):
             if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+number*self.text_size))
             else: self.image.blit(self.text_font.render(text, True, (0,0,255)),(self.width//2,self.abs_height+number*self.text_size))
     
+    def event_keydown(self,event):
+        if event.key==K_DOWN: self.current=(self.current+1)%self.menu_length
+        elif event.key==K_UP: self.current=(self.current-1)%self.menu_length
+        elif event.key==K_RETURN: self.str_func[self.current][1]()
+            
 
 class MainMenu(Menu):
-    items=(('Start Local Game', None), ('Start Network Game', None), ('Join Network Game', None), ('Credits', None), ('Quit', None))
+    '''This menu is shown on a game startup'''
+    items=(('Start Local Game', None), ('Start Network Game', None), ('Join Network Game', None), ('Credits', None), ('Quit', sys.exit))
     def __init__(self, game):
         super(MainMenu, self).__init__(game, MainMenu.items, 'Main Menu') 
+
+class ChooseLevelMenu(Menu):
+    '''This menu is shown on a game startup'''
+    def __init__(self, game, players):
+        self.list_of_good_maps=[]
+        for filename in glob.glob('Maps\\*.bff'):
+            if int(open(filename).readline().split()[2])>=players:
+                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0],None))
+        super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
