@@ -9,6 +9,7 @@ import ctypes
 from pygame.locals import *
 import ctypes
 import GameObjects
+import menu
 
 
 class Game(object):
@@ -47,6 +48,14 @@ class Game(object):
         self.level = GameObjects.Level('Maps\\map1.bff',self.height,self.width)
         #to control a framerate
         clock = pygame.time.Clock()
+		while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
+            self.menu.update()
+            self.menu.draw(self.surface)
+            pygame.display.flip()
+            #Let other processes to work a bit, limiting the framerate
+            clock.tick(self.config['general']['framerate'])
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
