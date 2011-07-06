@@ -37,6 +37,7 @@ class Game(object):
         self.height = pygame.display.Info().current_h
         self.width = pygame.display.Info().current_w
         self.level = None
+        self.menu = None
 
     def __del__(self):
         """Deinitializes the game."""
@@ -46,11 +47,13 @@ class Game(object):
         """Starts the game's main loop."""
         #Todo: load a this actually should be done when users selects the level in the GUI
         self.level = GameObjects.Level('Maps\\map1.bff',self.height,self.width)
+        self.menu = menu.MainMenu(self.height,self.width)
         #to control a framerate
         clock = pygame.time.Clock()
-		while True:
+        menu_bool = True
+        while menu_bool:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
+                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): menu_bool = False
             self.menu.update()
             self.menu.draw(self.surface)
             pygame.display.flip()
