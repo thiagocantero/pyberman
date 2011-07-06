@@ -7,7 +7,8 @@ import sys
 import pygame
 from pygame.locals import *
 from gameobjects import *
-from menu import MainMenu
+from ui import MainMenu
+from ui import ChooseLevelMenu
 
 class Game(object):
     """Represents a high-level game instance.
@@ -43,18 +44,10 @@ class Game(object):
     def main_loop(self):
         """Starts the game's main loop."""
         #Todo: load a this actually should be done when users selects the level in the GUI
-        MainMenu(self)        
+        #mainmenu=MainMenu(self)        
         #to control a framerate
         clock = pygame.time.Clock()
         
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
-            self.update()
-            self.redraw()
-            pygame.display.flip()
-            clock.tick(self.config['general']['framerate'])
-
         self.load_level('Maps\\map1.bff')
         
         while True:
