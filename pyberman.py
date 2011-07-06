@@ -7,7 +7,7 @@ import sys
 import pygame
 from pygame.locals import *
 from gameobjects import *
-
+from menu import MainMenu
 
 class Game(object):
     """Represents a high-level game instance.
@@ -43,9 +43,20 @@ class Game(object):
     def main_loop(self):
         """Starts the game's main loop."""
         #Todo: load a this actually should be done when users selects the level in the GUI
-        self.load_level('Maps\\map1.bff')
+        MainMenu(self)        
         #to control a framerate
         clock = pygame.time.Clock()
+        
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
+            self.update()
+            self.redraw()
+            pygame.display.flip()
+            clock.tick(self.config['general']['framerate'])
+
+        self.load_level('Maps\\map1.bff')
+        
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
@@ -66,13 +77,13 @@ class Game(object):
                 for col_num, col in enumerate(row.strip()):
                     if col_num == self.width: raise RuntimeError('Too many colums in row %d'%row_num+1)
                     if col == 'W':
-                        Wall(self, row_num, col_num, groups=(self.all, self.obstacles))
+                        Wall(self, col_num, row_num, groups=(self.all, self.obstacles))
                     elif col == 'B':
-                        Box(self, row_num, col_num, groups=(self.all, self.dynamic, self.obstacles))
+                        Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles))
                     elif col == ' ': 
                         pass
                     elif col.isdigit() and int(col)<10:
-                        Player(self, row_num, col_num, int(col)-1, groups=(self.all, self.dynamic))
+                        Player(self, col_num, row_num, int(col)-1, groups=(self.all, self.dynamic))
                     else:
                         raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
                 if col_num<self.width-1:

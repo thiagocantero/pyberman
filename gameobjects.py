@@ -16,7 +16,7 @@ class GameObject(pygame.sprite.Sprite):
     #: list of file names of images to load
     image_files=[]
 
-    def __init__(self, game, y,x, groups=None):
+    def __init__(self, game, x, y, groups=None):
         self.game = game
         self.x, self.y = x,y
         super(GameObject, self).__init__(*(groups if groups is not None else []))
