@@ -7,9 +7,10 @@ import sys
 import pygame
 from pygame.locals import *
 from gameobjects import *
+import events
 
 
-class Game(object):
+class Game(events.AutoListeningObject):
     """Represents a high-level game instance.
     Should be a singleton.
     """
@@ -30,11 +31,14 @@ class Game(object):
         pygame.init()
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
-		# use default resolution
+        # use default resolution
         self.surface = pygame.display.set_mode((0,0), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         self.screen_height = pygame.display.Info().current_h
         self.screen_width = pygame.display.Info().current_w
         self.create_groups()
+        #: Whether the main loop should run
+        self.done = False
+        super(Game, self).__init__()
 
     def __del__(self):
         """Deinitializes the game."""
@@ -46,14 +50,22 @@ class Game(object):
         self.load_level('Maps\\map1.bff')
         #to control a framerate
         clock = pygame.time.Clock()
-        while True:
+        while not self.done:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
+                events.Event.process_event(events.event_from_pygame_event(self, event))
             self.update()
             self.redraw()
             pygame.display.flip()
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
+
+    def event_keydown(self, event):
+        if event.key==K_ESCAPE:
+            event.stop_propagating = True
+            events.Event.process_event(events.QuitEvent(self))
+
+    def event_quit(self, event):
+        self.done = True
 
     def load_level(self, filename):
         with open(filename) as f:
@@ -99,7 +111,7 @@ class Game(object):
 
     def update(self):
         self.all.update()
-                
+
     @classmethod
     def instance(cls):
         if cls._instance is None:
