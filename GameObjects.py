@@ -25,17 +25,16 @@ class GameObject(pygame.sprite.Sprite):
     #: list of file names of images to load
     image_files=[]
 
-    def __init__(self, level, x,y, groups=None):
+    def __init__(self, level, y,x, groups=None):
         self.level = level
-        self.x = x
-        self.y = y
+        self.x, self.y = x,y
         super(GameObject, self).__init__(*(groups if groups is not None else []))
         self.images=[]
         if self.image_files:
             for f in self.image_files:
                 self.images.append(GameObject.load_image(f))
         if self.images:
-            self.image=self.images[0]
+            self.image = pygame.transform.smoothscale(self.images[0],(self.side,self.side))
 
     def update(self):
         """Updates the object's state.
@@ -171,8 +170,7 @@ class Level(object):
 
     def __init__(self, filename, h, w):
         self.create_groups()
-        self.res_h=h
-        self.res_w=w
+        self.res_h,self.res_w=h,w
         self.load_level(filename)
 #        self.background = pygame.Surface(game.surface.get_size()).convert()
 #        self.background.fill((100, 100, 100))
@@ -182,10 +180,9 @@ class Level(object):
     def load_level(self, filename):
         with open(filename) as f:
             self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
-            #Todo: make use of game.config['screen'] instead of hard-coding
-            self.side=min([self.res_h/self.height,self.res_w/self.width])
-            self._absw = self.res_w-(self.width*self.side)
-            self._absh = self.res_h-(self.height*self.side)
+            self.side=min([self.res_h//self.height,self.res_w//self.width])
+            self._absw = (self.res_w-(self.width*self.side))//2
+            self._absh = (self.res_h-(self.height*self.side))//2
             for row_num, row in enumerate(f):
                 if row_num == self.height: raise RuntimeError('Too many lines in the file')
                 for col_num, col in enumerate(row.strip()):

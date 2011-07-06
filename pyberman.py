@@ -23,7 +23,7 @@ class Game(object):
             #'height': ctypes.windll.user32.GetSystemMetrics(1),
             },
         'general': {
-            'framerate': 1,
+            'framerate': 50,
             }
         }
 
@@ -51,7 +51,6 @@ class Game(object):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE): return
             self.level.update()
-            #self.surface.fill(pygame.Color.b)
             self.level.draw(self.surface)
             pygame.display.flip()
             #Let other processes to work a bit, limiting the framerate
