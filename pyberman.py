@@ -48,10 +48,10 @@ class Game(events.AutoListeningObject):
     def main_loop(self):
         """Starts the game's main loop."""
         #Todo: load a this actually should be done when users selects the level in the GUI
-        #mainmenu=MainMenu(self)        
+        mainmenu=MainMenu(self)        
         #to control a framerate
         clock = pygame.time.Clock()
-        self.load_level('Maps\\map1.bff')
+        #self.load_level('Maps\\map1.bff')
         while not self.done:
             for event in pygame.event.get():
                 events.Event.process_event(events.event_from_pygame_event(self, event))

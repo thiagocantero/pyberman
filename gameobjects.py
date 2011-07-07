@@ -5,11 +5,12 @@
 
 import os
 import pygame
+import events
 
 IMAGE_DIR = "Data"
 
 
-class GameObject(pygame.sprite.Sprite):
+class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     """The base class for all visible entities in the game, which implements generic operations.
     See the base class documentation at http://pygame.org/docs/ref/sprite.html#pygame.sprite
     """
@@ -20,6 +21,8 @@ class GameObject(pygame.sprite.Sprite):
         self.game = game
         self.x, self.y = x,y
         super(GameObject, self).__init__(*(groups if groups is not None else []))
+        #Sprite doesn't call super, so we have o do it manually in order for AUtoListeningObject gets initialized
+        events.AutoListeningObject.__init__(self)
         self.images=[]
         if self.image_files:
             for f in self.image_files:
