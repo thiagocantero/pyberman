@@ -4,6 +4,7 @@ from pygame.locals import *
 import glob
 import os
 from gameobjects import GameObject 
+import events
 
 class Menu(GameObject):
     '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
@@ -54,15 +55,36 @@ class Menu(GameObject):
 
 class MainMenu(Menu):
     '''This menu is shown on a game startup'''
-    items=(('Start Local Game', None), ('Start Network Game', None), ('Join Network Game', None), ('Credits', None), ('Quit', sys.exit))
     def __init__(self, game):
-        super(MainMenu, self).__init__(game, MainMenu.items, 'Main Menu') 
+        self.items=(
+            ('Start Local Game', self.start_local_game), 
+            ('Start Network Game', None), 
+            ('Join Network Game', None), 
+            ('Credits', None), 
+            ('Quit', self.quit)
+        )
+        super(MainMenu, self).__init__(game, self.items, 'Main Menu') 
+
+    def start_local_game(self):
+        self.kill()
+        ChooseLevelMenu(self.game, 2)
+
+    def quit(self):
+        events.Event.process_event(events.QuitEvent(self))
+
 
 class ChooseLevelMenu(Menu):
     '''This menu is shown on a game startup'''
     def __init__(self, game, players):
         self.list_of_good_maps=[]
+        self.file_names = []
         for filename in glob.glob('Maps\\*.bff'):
             if int(open(filename).readline().split()[2])>=players:
-                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0],None))
+                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0],self.load_level))
+                self.file_names.append(filename)
         super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
+
+    def load_level(self):
+        self.kill()
+        self.game.all.remove(self)
+        self.game.load_level(self.file_names[self.current])
