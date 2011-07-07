@@ -7,7 +7,7 @@ import sys
 import pygame
 from pygame.locals import *
 from gameobjects import *
-from ui import MainMenu, ChooseLevelMenu
+from ui import MainMenu
 import events
 
 
@@ -47,11 +47,9 @@ class Game(events.AutoListeningObject):
 
     def main_loop(self):
         """Starts the game's main loop."""
-        #Todo: load a this actually should be done when users selects the level in the GUI
-        mainmenu=MainMenu(self)        
         #to control a framerate
         clock = pygame.time.Clock()
-        #self.load_level('Maps\\map1.bff')
+        MainMenu(self)        
         while not self.done:
             for event in pygame.event.get():
                 events.Event.process_event(events.event_from_pygame_event(self, event))
@@ -103,7 +101,7 @@ class Game(events.AutoListeningObject):
         return self._absh+y*self.side
 
     def create_groups(self):
-        self.all = pygame.sprite.RenderUpdates()
+        self.all = pygame.sprite.Group()
         self.obstacles = pygame.sprite.Group()
         self.dynamic = pygame.sprite.Group() #those objects which may progress over time
 
