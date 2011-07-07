@@ -85,6 +85,5 @@ class ChooseLevelMenu(Menu):
         super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
 
     def load_level(self):
-        self.kill()
-        self.game.all.remove(self)
         self.game.load_level(self.file_names[self.current])
+        self.kill()

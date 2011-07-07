@@ -3,8 +3,9 @@
 
 """Contains the Event class."""
 
+import weakref
 import pygame
-import proxyref
+
 
 class Event(object):
     """Represents a game event."""
@@ -33,9 +34,10 @@ class Event(object):
         @type handlers: list
         """
         for handler in handlers[:]:
-            try:
-                handler(self)
-            except ReferenceError: #object died
+            obj = handler[0]()
+            if obj is not None:
+                handler[1](obj, self)
+            else: #object died
                 handlers.remove(handler)
             if self.stop_propagating: #handler requested that the event should not be passed to other handlers
                 break
@@ -53,12 +55,12 @@ class Event(object):
         if handlers is None:
             raise RuntimeError("event '%s' is not supported")
         #store a weak reference in order not to prevent object from garbage colecting if it listens for events
-        handlers.append(proxyref.Proxy(handler))
+        handlers.append((weakref.ref(handler.im_self), handler.im_func))
 
     @classmethod
     def unregister_event_handler(cls, event, handler):
         """Unregisters a specified event handler."""
-        cls._event_handlers[event].remove(proxyref.Proxy(handler))
+        cls._event_handlers[event].remove((weakref.ref(handler.im_self), handler.im_func))
 
     @classmethod
     def process_event(cls, event):
@@ -137,13 +139,6 @@ class AutoListeningObject(object):
             if handler is not None:
                 Event.register_event_handler(event_name, handler)
         super(AutoListeningObject, self).__init__()
-
-    def __del__(self):
-        #unregister all handlers
-        for event_name in Event._event_handlers:
-            handler = getattr(self, 'event_%s'%event_name, None)
-            if handler is not None:
-                Event.unregister_event_handler(event_name, handler)
 
 
 def event_from_pygame_event(sender, event):
