@@ -4,11 +4,13 @@
 """The Pyberman runner."""
 
 import sys
+import random
 import pygame
 from pygame.locals import *
 from gameobjects import *
 from ui import MainMenu
 import events
+import controller
 
 
 class Game(events.AutoListeningObject):
@@ -37,6 +39,9 @@ class Game(events.AutoListeningObject):
         self.screen_height = pygame.display.Info().current_h
         self.screen_width = pygame.display.Info().current_w
         self.create_groups()
+        self.players_available = 0
+        self.available=[]
+        self.players=[None]*10
         #: Whether the main loop should run
         self.done = False
         super(Game, self).__init__()
@@ -67,7 +72,7 @@ class Game(events.AutoListeningObject):
     def event_quit(self, event):
         self.done = True
 
-    def load_level(self, filename):
+    def load_level(self, filename, num):
         with open(filename) as f:
             self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
             self.side=min((self.screen_height//self.height,self.screen_width//self.width))
@@ -83,14 +88,23 @@ class Game(events.AutoListeningObject):
                         Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles))
                     elif col == ' ': 
                         pass
-                    elif col.isdigit() and int(col)<10:
-                        Player(self, col_num, row_num, int(col)-1, groups=(self.all, self.dynamic))
+                    elif col=='S':
+                        if self.players_available<num:
+                            self.available.append(Player(self, col_num, row_num, self.players_available, groups=(self.all, self.dynamic)))
+                        self.players_available+=1
                     else:
                         raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
                 if col_num<self.width-1:
                     raise RuntimeError('Insuficient number of colums in row %d'%row_num+1)
             if row_num<self.height-1:
                 raise RuntimeError('Insuficient number of rows')
+        for x in range(num):
+            while self.players[x] is None:
+                y=random.choice(self.available)
+                if y.used==False:
+                    self.players[x]=y
+        print self.players
+        controller.LocalController(self.available[0],self.available[1])
 
     def xcoord_to_screen(self, x):
         """Translates given x coordinate from the game coord system to screen coord system."""
