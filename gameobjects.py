@@ -38,11 +38,11 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
 
     @property
     def width(self):
-        return self.game.side
+        return self.game.side-1
 
     @property
     def height(self):
-        return self.game.side
+        return self.game.side-1
     
     def load_image(self, file_name):
         return pygame.transform.smoothscale(pygame.image.load(os.path.join(IMAGE_DIR, file_name)), (self.width, self.height))
@@ -179,19 +179,15 @@ class Player(GameObject):
         self.image = self.load_image(Player.player_images[id])
 
     def go_up(self):
-        self.y -= self.speed
         self.move_forward([0, -self.speed])
     
     def go_down(self):
-        self.y += self.speed
         self.move_forward([0,self.speed])
         
     def go_left(self):
-        self.x -= self.speed
         self.move_forward([-self.speed,0])
         
     def go_right(self):
-        self.x += self.speed
         self.move_forward([self.speed,0])
     
     def put_bomb(self): pass
@@ -202,5 +198,11 @@ class Player(GameObject):
     def update(self):
         if self.dest != None:
             self.x += self.dest[0]
+            self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+            if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
+                self.x-=self.dest[0]
             self.y += self.dest[1]
+            self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+            if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
+                self.y-=self.dest[1]
         super(Player, self).update()
