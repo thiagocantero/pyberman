@@ -140,7 +140,13 @@ class AutoListeningObject(object):
                 Event.register_event_handler(event_name, handler)
         super(AutoListeningObject, self).__init__()
 
+    def unregister_all_event_handlers(self):
+        for event_name in Event._event_handlers:
+            handler = getattr(self, 'event_%s'%event_name, None)
+            if handler is not None:
+                Event.unregister_event_handler(event_name, handler)
 
+                
 def event_from_pygame_event(sender, event):
     """Maps pygame event to an appropriate Event subclass.
     @param event: a pygame event to map

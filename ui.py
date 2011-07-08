@@ -31,7 +31,7 @@ class Menu(GameObject):
         #abs_height is computed in the way that all items of menu would be centralized
         self.abs_height=(self.height-self.menu_length*self.text_size)//2
         self.current=0
-        
+
     @property
     def width(self):
         return self.game.screen_width
@@ -85,5 +85,5 @@ class ChooseLevelMenu(Menu):
         super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
 
     def load_level(self):
-        self.game.load_level(self.file_names[self.current])
         self.kill()
+        self.game.load_level(self.file_names[self.current])
