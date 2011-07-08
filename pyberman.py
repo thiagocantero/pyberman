@@ -86,12 +86,12 @@ class Game(events.AutoListeningObject):
                     if col == 'W':
                         Wall(self, col_num, row_num, groups=(self.all, self.obstacles))
                     elif col == 'B':
-                        Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles))
+                        Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles, self.destroyable))
                     elif col == ' ': 
                         pass
                     elif col=='S':
                         if self.players_available<num:
-                            self.available.append(Player(self, col_num, row_num, self.players_available, groups=(self.all, self.dynamic)))
+                            self.available.append(Player(self, col_num, row_num, self.players_available, groups=(self.all, self.dynamic, self.destroyable)))
                         self.players_available+=1
                     else:
                         raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
@@ -104,7 +104,6 @@ class Game(events.AutoListeningObject):
                 y=random.choice(self.available)
                 if y.used==False:
                     self.players[x]=y
-        print self.players
         self.controller = controller.LocalController(self.available[0],self.available[1])
 
     def xcoord_to_screen(self, x):
@@ -119,6 +118,9 @@ class Game(events.AutoListeningObject):
         self.all = pygame.sprite.Group()
         self.obstacles = pygame.sprite.Group()
         self.dynamic = pygame.sprite.Group() #those objects which may progress over time
+        self.bombs = pygame.sprite.Group()
+        self.destroyable = pygame.sprite.Group()
+        self.fire = pygame.sprite.Group()
 
     def redraw(self):
         """Redraws the level. It is called each core pumb"""
