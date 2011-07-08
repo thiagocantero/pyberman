@@ -147,63 +147,83 @@ class Bomb(GameObject):
         self.time=80
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('bomb.png')
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def collide_Player(self, player):
         #Lex: what is it supposed to do?
         if player.can_move_bombs:pass
     
     def explode(self):
-        print self.x,self.y,int(round(self.x)),int(round(self.x)+self.player.radius+1)
+        '''This code is so ugly, but it works'''
+        self.kill()
+        self.player.bombs+=1
         for xx in range(int(round(self.x)+1),int(round(self.x)+self.player.radius+1)):
             if xx<self.game.width-1:
                 fire=Fire(self.game,self.player,xx,round(self.y),groups=(self.game.all,self.game.fire))
-                print fire.x,fire.y
-                if len(pygame.sprite.spritecollide(fire,self.game.destroyable,True))!=0:
-                    break
-                if len(pygame.sprite.spritecollide(fire,self.game.all,False))!=0:
-                    fire.kill()
+                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
+                if len(destroyed)!=0:
+                    for obj in destroyed:
+                        if isinstance(obj,Bomb):
+                            obj.explode()
+                        elif isinstance(obj,Player):
+                            self.game.players_alive-=1
+                            self.player.kills+=1
                     break
         for xx in range(int(round(self.x)-1),int(round(self.x)-self.player.radius-1),-1):
             if xx>0:
                 fire=Fire(self.game,self.player,xx,round(self.y),groups=(self.game.all,self.game.fire))
-                if len(pygame.sprite.spritecollide(fire,self.game.destroyable,True))!=0:
-                    break            
-                if len(pygame.sprite.spritecollide(fire,self.game.all,False))!=0:
-                    fire.kill()
+                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
+                if len(destroyed)!=0:
+                    for obj in destroyed:
+                        if isinstance(obj,Bomb):
+                            obj.explode()
+                        elif isinstance(obj,Player):
+                            self.game.players_alive-=1
+                            self.player.kills+=1
                     break
         for yy in range(int(round(self.y)+1),int(round(self.y)+self.player.radius+1)):
             if yy<self.game.height-1:
                 fire=Fire(self.game,self.player,round(self.x),yy,groups=(self.game.all,self.game.fire))
-                if len(pygame.sprite.spritecollide(fire,self.game.destroyable,True))!=0:
+                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
+                if len(destroyed)!=0:
+                    for obj in destroyed:
+                        if isinstance(obj,Bomb):
+                            obj.explode()
+                        elif isinstance(obj,Player):
+                            self.game.players_alive-=1
+                            self.player.kills+=1
                     break            
-                if len(pygame.sprite.spritecollide(fire,self.game.all,False))!=0:
-                    fire.kill()
-                    break        
         for yy in range(int(round(self.y)-1),int(round(self.y)-self.player.radius-1),-1):
             if yy>0:
                 fire=Fire(self.game,self.player,round(self.x),yy,groups=(self.game.all,self.game.fire))
-                if len(pygame.sprite.spritecollide(fire,self.game.destroyable,True))!=0:
-                    break            
-                if len(pygame.sprite.spritecollide(fire,self.game.all,False))!=0:
-                    fire.kill()
+                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
+                if len(destroyed)!=0:
+                    for obj in destroyed:
+                        if isinstance(obj,Bomb):
+                            obj.explode()
+                        elif isinstance(obj,Player):
+                            self.game.players_alive-=1
+                            self.player.kills+=1
                     break            
 
     def update(self):
         self.time-=1
-        if self.time==0: 
-            self.kill()
-            self.explode()           
+        if self.time==0:
+            self.explode()     
         super(Bomb, self).update()
     
 class Fire(GameObject):
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
+        self.time = 3
         super(Fire, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('fire.jpg')
         super(Fire, self).update()
     
     def update(self):
-        self.kill()
+        self.time-=1
+        if self.time<0:
+            self.kill()
 
 class Wall(GameObject):
     """An obstacle which player can not get through."""
@@ -231,6 +251,7 @@ class Player(GameObject):
         self.bombs = 1
         self.speed=0.1
         self.radius=1
+        self.kills=0
         self.dest = None
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
@@ -249,7 +270,9 @@ class Player(GameObject):
         self.move_forward([self.speed,0])
     
     def put_bomb(self):
-        Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
+        if self.bombs>0:
+            self.bombs-=1
+            Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
     
     def move_forward(self, dest):
         self.dest = dest
@@ -265,3 +288,4 @@ class Player(GameObject):
             if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
                 self.y-=self.dest[1]
         super(Player, self).update()
+        
