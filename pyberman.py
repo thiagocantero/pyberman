@@ -38,6 +38,7 @@ class Game(events.AutoListeningObject):
         self.surface = pygame.display.set_mode((0,0), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         self.screen_height = pygame.display.Info().current_h
         self.screen_width = pygame.display.Info().current_w
+        self.controller = None
         self.create_groups()
         self.players_available = 0
         self.available=[]
@@ -104,7 +105,7 @@ class Game(events.AutoListeningObject):
                 if y.used==False:
                     self.players[x]=y
         print self.players
-        controller.LocalController(self.available[0],self.available[1])
+        self.controller = controller.LocalController(self.available[0],self.available[1])
 
     def xcoord_to_screen(self, x):
         """Translates given x coordinate from the game coord system to screen coord system."""
@@ -121,6 +122,7 @@ class Game(events.AutoListeningObject):
 
     def redraw(self):
         """Redraws the level. It is called each core pumb"""
+        self.surface.fill((0,0,0))
         self.all.draw(self.surface)
 
     def update(self):

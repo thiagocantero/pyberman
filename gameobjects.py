@@ -171,22 +171,36 @@ class Player(GameObject):
         self.used=False
         self.id = id
         self.bombs = 1
-        self.speed=3
+        self.speed=0.1
         self.radius=1
+        self.dest = None
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image(Player.player_images[id])
 
     def go_up(self):
         self.y -= self.speed
+        self.move_forward([0, -self.speed])
     
     def go_down(self):
         self.y += self.speed
+        self.move_forward([0,self.speed])
         
     def go_left(self):
         self.x -= self.speed
+        self.move_forward([-self.speed,0])
         
     def go_right(self):
         self.x += self.speed
+        self.move_forward([self.speed,0])
     
     def put_bomb(self): pass
+    
+    def move_forward(self, dest):
+        self.dest = dest
+        
+    def update(self):
+        if self.dest != None:
+            self.x += self.dest[0]
+            self.y += self.dest[1]
+        super(Player, self).update()
