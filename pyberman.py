@@ -43,6 +43,7 @@ class Game(events.AutoListeningObject):
         self.players_available = 0
         self.available=[]
         self.players=[None]*10
+        self.players_alive=2
         #: Whether the main loop should run
         self.done = False
         super(Game, self).__init__()
@@ -62,9 +63,13 @@ class Game(events.AutoListeningObject):
             self.update()
             self.redraw()
             pygame.display.flip()
+            if self.players_alive<2:
+                self.done=True
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
-
+        for gamer in self.gamers:
+            print gamer.kills
+        
     def event_keydown(self, event):
         if event.key==K_ESCAPE:
             event.stop_propagating = True
@@ -74,6 +79,7 @@ class Game(events.AutoListeningObject):
         self.done = True
 
     def load_level(self, filename, num):
+        self.players_alive=num
         with open(filename) as f:
             self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
             self.side=min((self.screen_height//self.height,self.screen_width//self.width))
@@ -91,7 +97,7 @@ class Game(events.AutoListeningObject):
                         pass
                     elif col=='S':
                         if self.players_available<num:
-                            self.available.append(Player(self, col_num, row_num, self.players_available, groups=(self.all, self.dynamic, self.destroyable)))
+                            self.available.append(Player(self, col_num, row_num, self.players_available, groups=(self.all, self.dynamic, self.destroyable, self.gamers)))
                         self.players_available+=1
                     else:
                         raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
@@ -119,6 +125,7 @@ class Game(events.AutoListeningObject):
         self.obstacles = pygame.sprite.Group()
         self.dynamic = pygame.sprite.Group() #those objects which may progress over time
         self.bombs = pygame.sprite.Group()
+        self.gamers = pygame.sprite.Group()
         self.destroyable = pygame.sprite.Group()
         self.fire = pygame.sprite.Group()
 
