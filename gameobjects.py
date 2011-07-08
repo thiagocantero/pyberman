@@ -168,10 +168,25 @@ class Player(GameObject):
     """Represents a player in the game."""
     player_images = ['1.jpg', '2.jpg', '3.jpg']
     def __init__(self, game, x, y, id, *args, **kwargs):
+        self.used=False
         self.id = id
         self.bombs = 1
-        self.speed=5
+        self.speed=3
         self.radius=1
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image(Player.player_images[id])
+
+    def go_up(self):
+        self.y -= self.speed
+    
+    def go_down(self):
+        self.y += self.speed
+        
+    def go_left(self):
+        self.x -= self.speed
+        
+    def go_right(self):
+        self.x += self.speed
+    
+    def put_bomb(self): pass
