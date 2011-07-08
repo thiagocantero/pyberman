@@ -55,6 +55,10 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     def screen_y(self):
         return self.game.ycoord_to_screen(self.y)
 
+    def kill(self):
+        super(GameObject, self).kill()
+        self.unregister_all_event_handlers()
+        
     def collide(self, other):
         """By default, it searches a method named 'collide_otherclassname' and calls it if exist.
         for example, if object implements method named 'collide_Player', it would be called when player collides with this object.
