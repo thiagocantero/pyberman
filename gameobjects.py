@@ -1,19 +1,20 @@
 #GameObjects.py
 #Copyright (C) 2011 PyTeam
 
-"""Game objects."""
+'''Game objects.'''
 
 import os
 import pygame
 import events
+import random
 
 IMAGE_DIR = "Data"
 
 
 class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
-    """The base class for all visible entities in the game, which implements generic operations.
+    '''The base class for all visible entities in the game, which implements generic operations.
     See the base class documentation at http://pygame.org/docs/ref/sprite.html#pygame.sprite
-    """
+    '''
     #: list of file names of images to load
     image_files=[]
 
@@ -71,7 +72,7 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
 
 
 class Bonus(GameObject):
-    """Represents an item which affects the player on collision and then disappears."""
+    '''Represents an item which affects the player on collision and then disappears.'''
     
     def collide_Player(self, player):
         self.affect_player(player)
@@ -83,36 +84,58 @@ class Bonus(GameObject):
         Should be overloaded in derived classes."""
         pass
 
-class SpeedupBonus(Bonus):
-    """Speeds the player up by a factor."""
-    image_files=['1.jpg']
+class SpeedUpBonus(Bonus):
+    '''Class representing bonus, increasing the player's speed by 0.05'''
+    image_files=['speedup.jpg']
+    
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(SpeedUpBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def affect_player(self, player):
-        player.speed+=1
+        player.speed+=0.05
 
         
 class AddBombBonus(Bonus):
-    image_files=['1.jpg']
+    '''Class representing bonus, increasing the capacity of player's bombs by one'''
+    image_files=['addbomb.jpg']
+
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(AddBombBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def affect_player(self, player):
         player.bombs += 1
 
         
 class MoveBombsBonus(Bonus) :
-    image_files=['2.jpg']
+    '''Class representing bonus, allowing the player to move the bomb'''
+    image_files=['movebombs.jpg']
+
+    #action of this class is still undone
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(MoveBombsBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+
 
     def affect_player(self, player):
         player.can_move_bombs = True
 
 
 class IncreaseRadiusBonus(Bonus):
-    image_files=['2.jpg']
+    '''Class representing bonus, increasing the radius of a player by one'''
+    image_files=['increaseradius.jpg']
 
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(IncreaseRadiusBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+    
     def affect_player(self, player):
         player.radius += 1
 
         
 class BadBonus(Bonus):
+    '''Class representing bad bonus, that have their period of impact over the player'''
     image_files=['2.jpg']
     def affect_player(self, player):
         # here timer is
@@ -120,30 +143,28 @@ class BadBonus(Bonus):
 
         
 class SpeedDownBonus(BadBonus):
-    
+    '''Class representing bad bonus, decreasing speed to minimum for a while'''
     def affect_player(self, player):
         speed_temp = player.speed
-        player.speed = 3
-        #Lex: WTF??? calling a constructor when object is already created?
-        #Zmolodchenko: this is win!
-        super().__init__(self, player) # timer here?
+        player.speed = 0.05
+        #timer needed
         player.speed = speed_temp
 
         
 class ReduceRadiusBonus(BadBonus):
+    '''Class representing bad bonus, reducing radius to minimum for a while'''
 
     def affect_player(self, player):
         radius_temp = player.radius
-        player.radius = 3
-        #and yet another win
-        super().__init__(self, player) 
+        player.radius = 1
+        #not done yet
         player.radius = radius_temp
 
         
 class Bomb(GameObject):
+    '''A class introducing Bomb, which can be put by player'''
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        
         self.time=80
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('bomb.png')
@@ -154,58 +175,41 @@ class Bomb(GameObject):
         if player.can_move_bombs:pass
     
     def explode(self):
-        '''This code is so ugly, but it works'''
+        '''Makes current bomb explode and releases the fire'''
         self.kill()
         self.player.bombs+=1
-        for xx in range(int(round(self.x)+1),int(round(self.x)+self.player.radius+1)):
-            if xx<self.game.width-1:
-                fire=Fire(self.game,self.player,xx,round(self.y),groups=(self.game.all,self.game.fire))
-                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
-                if len(destroyed)!=0:
-                    for obj in destroyed:
-                        if isinstance(obj,Bomb):
-                            obj.explode()
-                        elif isinstance(obj,Player):
-                            self.game.players_alive-=1
-                            self.player.kills+=1
-                    break
+        for xx in range(int(round(self.x)),int(round(self.x)+self.player.radius+1)):
+            if xx<self.game.width-1 and self.check(xx,round(self.y)): break
+            
         for xx in range(int(round(self.x)-1),int(round(self.x)-self.player.radius-1),-1):
-            if xx>0:
-                fire=Fire(self.game,self.player,xx,round(self.y),groups=(self.game.all,self.game.fire))
-                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
-                if len(destroyed)!=0:
-                    for obj in destroyed:
-                        if isinstance(obj,Bomb):
-                            obj.explode()
-                        elif isinstance(obj,Player):
-                            self.game.players_alive-=1
-                            self.player.kills+=1
-                    break
-        for yy in range(int(round(self.y)+1),int(round(self.y)+self.player.radius+1)):
-            if yy<self.game.height-1:
-                fire=Fire(self.game,self.player,round(self.x),yy,groups=(self.game.all,self.game.fire))
-                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
-                if len(destroyed)!=0:
-                    for obj in destroyed:
-                        if isinstance(obj,Bomb):
-                            obj.explode()
-                        elif isinstance(obj,Player):
-                            self.game.players_alive-=1
-                            self.player.kills+=1
-                    break            
-        for yy in range(int(round(self.y)-1),int(round(self.y)-self.player.radius-1),-1):
-            if yy>0:
-                fire=Fire(self.game,self.player,round(self.x),yy,groups=(self.game.all,self.game.fire))
-                destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
-                if len(destroyed)!=0:
-                    for obj in destroyed:
-                        if isinstance(obj,Bomb):
-                            obj.explode()
-                        elif isinstance(obj,Player):
-                            self.game.players_alive-=1
-                            self.player.kills+=1
-                    break            
+            if xx>0 and self.check(xx,round(self.y)): break
 
+        for yy in range(int(round(self.y)+1),int(round(self.y)+self.player.radius+1)):
+            if yy<self.game.height-1 and self.check(round(self.x),yy): break
+
+        for yy in range(int(round(self.y)-1),int(round(self.y)-self.player.radius-1),-1):
+            if yy>0 and self.check(round(self.x),yy): break
+            
+    def check(self,dx,dy):
+        '''Checks if fire can move futher'''
+        ret=False
+        fire=Fire(self.game,self.player,dx,dy,groups=(self.game.all,self.game.dynamic))
+        destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
+        if len(destroyed)!=0:
+            for obj in destroyed:
+                if isinstance(obj,Bomb):
+                    obj.explode()
+                elif isinstance(obj,Player):
+                    self.game.players_alive-=1
+                    self.player.kills+=1
+                elif isinstance(obj,Box):
+                    obj.collide_Fire()
+            ret=True
+        if len(pygame.sprite.spritecollide(fire,self.game.walls,False))>0: 
+            fire.kill()
+            ret=True
+        return ret
+            
     def update(self):
         self.time-=1
         if self.time==0:
@@ -213,6 +217,7 @@ class Bomb(GameObject):
         super(Bomb, self).update()
     
 class Fire(GameObject):
+    '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
         self.time = 3
@@ -221,12 +226,13 @@ class Fire(GameObject):
         super(Fire, self).update()
     
     def update(self):
+        '''As fire exists 3 reloads, it's durance decreases'''
         self.time-=1
         if self.time<0:
             self.kill()
 
 class Wall(GameObject):
-    """An obstacle which player can not get through."""
+    '''An obstacle which player can not get through.'''
     image_files = ['wall.jpg']
 
     def collide_Player(self, player):
@@ -234,16 +240,18 @@ class Wall(GameObject):
 
 
 class Box(Wall):
-    """An obstacle which can be ruined by a bomb explosion."""
+    '''An obstacle which can be ruined by a bomb explosion.'''
     image_files = ['box.jpg']
 
-    def collide_BombExplosion(self):
-        self.kill()
-        return True
-
+    def collide_Fire(self):
+        '''When colliding fire, the wall may generate bonus''' 
+        x=random.choice([True,False])
+        #Only good bonuses by now
+        w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus])
+        if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
 
 class Player(GameObject):
-    """Represents a player in the game."""
+    '''Represents a player in the game.'''
     player_images = ['1.jpg', '2.jpg', '3.jpg']
     def __init__(self, game, x, y, id, *args, **kwargs):
         self.used=False
@@ -256,6 +264,8 @@ class Player(GameObject):
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image(Player.player_images[id])
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+
 
     def go_up(self):
         self.move_forward([0, -self.speed])
@@ -270,14 +280,17 @@ class Player(GameObject):
         self.move_forward([self.speed,0])
     
     def put_bomb(self):
+        '''Current player puts the bomb if he has the one'''
         if self.bombs>0:
             self.bombs-=1
             Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
     
     def move_forward(self, dest):
+        '''Moves player to his destination'''
         self.dest = dest
         
     def update(self):
+        '''Moves player to his destination and checks whether he accepted any bonuses'''
         if self.dest != None:
             self.x += self.dest[0]
             self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
@@ -287,5 +300,14 @@ class Player(GameObject):
             self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
             if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
                 self.y-=self.dest[1]
+        bonus=pygame.sprite.spritecollide(self,self.game.bonuses,True)
+        if len(bonus)>0:
+            for x in bonus:
+                x.affect_player(self)
         super(Player, self).update()
+    
+    def move_up_to(self):
+        '''Function for truncating the player added for easier getting to the position'''
+        self.x=round(self.x)
+        self.y=round(self.y)
         
