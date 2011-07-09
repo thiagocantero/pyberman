@@ -48,8 +48,12 @@ class Menu(GameObject):
             else: self.image.blit(self.text_font.render(text, True, (0,0,255)),(self.width//2,self.abs_height+number*self.text_size))
     
     def event_keydown(self,event):
-        if event.key==K_DOWN: self.current=(self.current+1)%self.menu_length
-        elif event.key==K_UP: self.current=(self.current-1)%self.menu_length
+        if event.key==K_DOWN:
+            self.game.menu_click.play()
+            self.current=(self.current+1)%self.menu_length
+        elif event.key==K_UP:
+            self.game.menu_click.play()
+            self.current=(self.current-1)%self.menu_length
         elif event.key==K_RETURN: self.str_func[self.current][1]()
             
 
@@ -78,13 +82,19 @@ class ChooseLevelMenu(Menu):
     def __init__(self, game, players):
         self.list_of_good_maps=[]
         self.file_names = []
+        self.game = game
         self.players = players
         for filename in glob.glob(os.path.join('Maps', '*.bff')):
             if int(open(filename).readline().split()[2])>=players:
-                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0], self.load_level))
+                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0].capitalize(), self.load_level))
                 self.file_names.append(filename)
+        self.list_of_good_maps.append(['Back', self.back])
         super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
 
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
+        
     def load_level(self):
         self.kill()
         self.game.load_level(self.file_names[self.current], self.players)
