@@ -79,9 +79,9 @@ class ChooseLevelMenu(Menu):
         self.list_of_good_maps=[]
         self.file_names = []
         self.players = players
-        for filename in glob.glob('Maps\\*.bff'):
+        for filename in glob.glob(os.path.join('Maps', '*.bff')):
             if int(open(filename).readline().split()[2])>=players:
-                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0],self.load_level))
+                self.list_of_good_maps.append((os.path.split(filename)[1].split('.')[0], self.load_level))
                 self.file_names.append(filename)
         super(ChooseLevelMenu, self).__init__(game, self.list_of_good_maps, 'Choose Map') 
 
