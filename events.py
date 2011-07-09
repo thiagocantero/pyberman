@@ -1,14 +1,14 @@
 #events.py
 #Copyright (C) 2011 PyTeam
 
-"""Contains the Event class."""
+'''Contains the Event class.'''
 
 import weakref
 import pygame
 
 
 class Event(object):
-    """Represents a game event."""
+    '''Represents a game event.'''
     #: Used in automatic handler registration etc
     name = "event"
     #: should be filled by Event subclasses
@@ -69,60 +69,60 @@ class Event(object):
 
 
 class KeyDownEvent(Event):
-    """User presses the key on the keyboard.
+    '''User presses the key on the keyboard.
     attributes: unicode, key, mod
-    """
+    '''
     name = 'keydown'
     Event._event_handlers[name] = [] #It is obligatory for all Event subclasses!
 
 
 class KeyUpEvent(Event):
-    """User releases the key on the keyboard.
+    '''User releases the key on the keyboard.
     attributes: key, mod
-    """
+    '''
     name = 'keyup'
     Event._event_handlers[name] = [] #It is obligatory for all Event subclasses!
 
 
 class QuitEvent(Event):
-    """User requests to quit."""
+    '''User requests to quit.'''
     name = 'quit'
     Event._event_handlers[name] = []
 
 
 class ActiveEvent(Event):
-    """User switches from/to the game window.
+    '''User switches from/to the game window.
     attributes: gain, state
-    """
+    '''
     name = 'active'
     Event._event_handlers[name] = []
 
 
 class MouseMotionEvent(Event):
-    """Mouse moves inside the game window.
+    '''Mouse moves inside the game window.
     attributes: pos, rel, buttons
-    """
+    '''
     name = 'mousemotion'
     Event._event_handlers[name] = []
 
 
 class MouseButtonDownEvent(Event):
-    """User presses the mouse button.
+    '''User presses the mouse button.
     attributes: pos, button
-    """
+    '''
     name = 'mousebuttondown'
     Event._event_handlers[name] = []
 
 
 class MouseButtonUpEvent(Event):
-    """User releases the mouse button.
+    '''User releases the mouse button.
     attributes: pos, button
-    """
+    '''
     name = 'mousebuttonup'
     Event._event_handlers[name] = []
 
 class AutoListeningObject(object):
-    """A mixin which registers event handlers based on present methods.
+    '''A mixin which registers event handlers based on present methods.
     Usage:
     class MyClass(AutoListeningObject, ...):
         ...
@@ -131,7 +131,7 @@ class AutoListeningObject(object):
                 self.do_something_cool()
     your method event_keydown will be automatically registered as a handler of event type 'keydown'.
     Enjoy!
-    """
+    '''
 
     def __init__(self):
         for event_name in Event._event_handlers:
@@ -148,12 +148,12 @@ class AutoListeningObject(object):
 
                 
 def event_from_pygame_event(sender, event):
-    """Maps pygame event to an appropriate Event subclass.
+    '''Maps pygame event to an appropriate Event subclass.
     @param event: a pygame event to map
     @type event: pygame.event.Event
     @returns: an instance of Event subclass
     @rtype: Event
-    """
+    '''
     pygame_events_to_event = {
         'QUIT': QuitEvent,
         'ACTIVEEVENT': ActiveEvent,
