@@ -47,6 +47,7 @@ class Game(events.AutoListeningObject):
         self.available=[]
         self.players=[None]*10
         self.players_alive=2
+        self.ground = pygame.image.load('Data\\ground.jpg')
         #: Whether the main loop should run
         self.done = False
         super(Game, self).__init__()
@@ -62,9 +63,9 @@ class Game(events.AutoListeningObject):
         MainMenu(self)        
         while not self.done:
             for event in pygame.event.get():
-                events.Event.process_event(events.event_from_pygame_event(self, event))
+                events.Event.process_event(events.event_from_pygame_event(self, event)) 
             self.update()
-            self.redraw()
+            self.redraw()  
             pygame.display.flip()
             if self.players_alive<2:
                 self.event_quit()
@@ -137,6 +138,7 @@ class Game(events.AutoListeningObject):
         
     def redraw(self):
         '''Redraws the level. It is called each core pumb'''
+        #self.surface.blit(self.ground, (0,0))
         self.surface.fill((0,0,0))
         self.all.draw(self.surface)
 
