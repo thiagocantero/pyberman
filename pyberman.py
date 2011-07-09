@@ -35,6 +35,10 @@ class Game(events.AutoListeningObject):
     def __init__(self):
         '''Initializes the game.'''
         pygame.init()
+        pygame.mixer.init()
+        self.menu_sound = pygame.mixer.Sound('Data\\Pandemonium.ogg')
+        self.menu_click = pygame.mixer.Sound('Data\\click.ogg')
+        self.explosions = [pygame.mixer.Sound('Data\\explosion.ogg'),pygame.mixer.Sound('Data\\explosion2.ogg'),pygame.mixer.Sound('Data\\explosion3.ogg')]
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         # use default resolution
@@ -60,7 +64,8 @@ class Game(events.AutoListeningObject):
         '''Starts the game's main loop.'''
         #to control a framerate
         clock = pygame.time.Clock()
-        MainMenu(self)        
+        MainMenu(self)
+        self.menu_sound.play()
         while not self.done:
             for event in pygame.event.get():
                 events.Event.process_event(events.event_from_pygame_event(self, event)) 
@@ -68,7 +73,7 @@ class Game(events.AutoListeningObject):
             self.redraw()  
             pygame.display.flip()
             if self.players_alive<2:
-                self.event_quit()
+                self.event_quit(event)
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
         
@@ -116,7 +121,7 @@ class Game(events.AutoListeningObject):
                 self.available.remove(y)
                 self.players[x]=Player(self, y[0], y[1], x, groups=(self.all, self.dynamic, self.destroyable, self.gamers))
         self.controller = controller.LocalController(self.players[0],self.players[1])
-
+        
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
         return self._absw+x*self.side

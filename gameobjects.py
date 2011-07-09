@@ -149,7 +149,7 @@ class IncreaseRadiusBonus(Bonus):
         
 class BadBonus(Bonus):
     '''Class representing bad bonus, that have their period of impact over the player'''
-    image_files=['2.jpg']
+    image_files=['bon_bad\\1.png','bon_bad\\2.png','bon_bad\\3.png','bon_bad\\4.png']
     def affect_player(self, player):
         # here timer is
         pass
@@ -166,13 +166,45 @@ class SpeedDownBonus(BadBonus):
         
 class ReduceRadiusBonus(BadBonus):
     '''Class representing bad bonus, reducing radius to minimum for a while'''
-
+    
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(ReduceRadiusBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+        
     def affect_player(self, player):
         radius_temp = player.radius
         player.radius = 1
+        self.time = 150
         #not done yet
         player.radius = radius_temp
+        
+    def update(self):
+        self.time-=1
+        if self.time==0:
+            kill(self)
+                    
+        super(Bomb, self).update()
+        
+        
 
+class ExchangePlacesBonus(BadBonus):
+    '''Class representing bad bonus, when player changes place with random other player'''
+    def __init__(self,game,x,y,*args,**kwargs):
+        super(ExchangePlacesBonus, self).__init__(game, x,y, *args, **kwargs)
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+        
+    def affect_player(self, player):
+        tempx, tempy = player.x, player.y
+        print self.game.players[:self.game.players_alive - 1]
+        print self.game.players
+        print self.game.available
+        print 
+        rand_player = random.choice(self.game.players[:self.game.players_alive ])
+        while rand_player == player:  rand_player=random.choice(self.game.players[:self.game.players_alive])
+        player.x = rand_player.x
+        player.y = rand_player.y
+        rand_player.x = tempx
+        rand_player.y = tempy
         
 class Bomb(GameObject):
     '''A class introducing Bomb, which can be put by player'''
@@ -190,6 +222,7 @@ class Bomb(GameObject):
     def explode(self):
         '''Makes current bomb explode and releases the fire'''
         self.kill()
+        random.choice(self.game.explosions).play()
         self.player.bombs+=1
         for xx in range(int(round(self.x)),int(round(self.x)+self.player.radius+1)):
             if xx<self.game.width-1 and self.check(xx,round(self.y)): break
@@ -262,7 +295,7 @@ class Box(Wall):
         '''When colliding fire, the wall may generate bonus''' 
         x=random.choice([True,False])
         #Only good bonuses by now
-        w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus])
+        w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus])
         if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
 
 class Player(GameObject):
