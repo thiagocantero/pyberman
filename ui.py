@@ -45,7 +45,7 @@ class Menu(GameObject):
         self.image.blit(self.rendered_title,((self.width-self.rendered_title.get_width())//2,self.text_size))
         for number,(text,func) in enumerate(self.str_func):
             if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+number*self.text_size))
-            else: self.image.blit(self.text_font.render(text, True, (0,0,255)),(self.width//2,self.abs_height+number*self.text_size))
+            else: self.image.blit(self.text_font.render(text, True, (0,154,205)),(self.width//2,self.abs_height+number*self.text_size))
     
     def event_keydown(self,event):
         if event.key==K_DOWN:

@@ -17,6 +17,7 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     '''
     #: list of file names of images to load
     image_files=[]
+    image_dict={}
 
     def __init__(self, game, x, y, groups=None):
         self.game = game
@@ -25,11 +26,16 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         #Sprite doesn't call super, so we have o do it manually in order for AUtoListeningObject gets initialized
         events.AutoListeningObject.__init__(self)
         self.images=[]
-        if self.image_files:
-            for f in self.image_files:
-                self.images.append(self.load_image(f))
-        if self.images:
-            self.image = self.images[0]
+        if self.__class__.__name__ in self.image_dict:
+            self.image=self.image_dict[self.__class__][0]
+        else:
+            if self.image_files:
+                for f in self.image_files:
+                    self.images.append(self.load_image(f))
+            self.image_dict[self.__class__]=self.images
+            if self.images:
+                self.image = self.images[0]
+                
     
     def update(self):
         """Updates the object's state.
@@ -303,16 +309,10 @@ class Player(GameObject):
     player_images = None
     
     def __init__(self, game, x, y, id, *args, **kwargs):
-        self.used=False
-        self.game = game
-        self.id = id
-        self.cur_pic = 0
-        self.cur_line = 0
+        self.game, self.id = game,id
+        self.cur_pic = self.cur_line = 0
         if Player.player_images == None: self.create_images()
-        self.bombs = 1
-        self.speed=0.1
-        self.radius=1
-        self.kills=0
+        self.bombs, self.speed, self.radius, self.kills = 1, 0.1, 1, 0
         self.dest = None
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
