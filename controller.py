@@ -27,7 +27,7 @@ class LocalController(events.AutoListeningObject):
             K_LCTRL:self.player2.put_bomb
         }
         events.AutoListeningObject.__init__(self)
-        
+    
     def event_keydown(self, event):
         '''Manages to use the key down until it is released'''
         func = self.actions.get(event.key, None)
@@ -44,6 +44,3 @@ class LocalController(events.AutoListeningObject):
             self.player2.dest = None
             self.player2.move_up_to()
         else: event.stop_propagating = True
-        
-        
-        
