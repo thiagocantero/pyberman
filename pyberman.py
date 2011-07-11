@@ -14,7 +14,7 @@ from gameobjects import *
 from ui import MainMenu
 from ui import Score
 import events
-import controller
+import controllers
 
 
 class Game(events.AutoListeningObject):
@@ -24,7 +24,8 @@ class Game(events.AutoListeningObject):
     _instance = None
     #Todo: implement reading from a config file
     config = {'general':
-             {'framerate': 50}}
+             {'framerate': 50},
+             'server': {'port': 8000}}
 
     def __init__(self):
         '''Initializes the game.'''
@@ -46,6 +47,7 @@ class Game(events.AutoListeningObject):
         self.ground = pygame.image.load('Data\\ground.jpg')
         #: Whether the main loop should run
         self.done = False
+        self.is_network_game = self.is_server = False
         super(Game, self).__init__()
 
     def __del__(self):
@@ -115,7 +117,7 @@ class Game(events.AutoListeningObject):
                 y=random.choice(self.available)
                 self.available.remove(y)
                 self.players[x]=Player(self, y[0], y[1], x, groups=(self.all, self.dynamic, self.destroyable, self.gamers))
-        self.controller = controller.LocalController(self.players[0],self.players[1])
+        self.controller = controllers.LocalController(self.players[0],self.players[1])
         
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
@@ -148,6 +150,15 @@ class Game(events.AutoListeningObject):
     def update(self):
         '''Updates all the objects on the level'''
         self.all.update()
+        if self.is_network_game:
+            self.connection.pump()
+            if self.is_server:
+                self.server.pump()
+
+    def start_server(self):
+        self.server = controllers.GameServer(localaddr=('0.0.0.0', self.config['server']['port']))
+        self.is_network_game = True
+        self.is_server = True
 
     @classmethod
     def instance(cls):

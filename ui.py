@@ -84,7 +84,7 @@ class MainMenu(Menu):
     def __init__(self, game):
         self.items=(
             ('Start Local Game', self.start_local_game), 
-            ('Start Network Game', None), 
+            ('Start Network Game', self.start_network_game), 
             ('Join Network Game', None),
             ('Settings', self.settings),
             ('Credits', self.credits), 
@@ -95,6 +95,10 @@ class MainMenu(Menu):
     def start_local_game(self):
         self.kill()
         ChooseLevelMenu(self.game, 2)
+    
+    def start_network_game(self):
+        self.kill()
+        self.game.start_server()
     
     def settings(self):
         self.kill()
