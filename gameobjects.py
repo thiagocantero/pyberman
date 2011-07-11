@@ -10,7 +10,6 @@ import random
 
 IMAGE_DIR = "Data"
 
-
 class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     '''The base class for all visible entities in the game, which implements generic operations.
     See the base class documentation at http://pygame.org/docs/ref/sprite.html#pygame.sprite
@@ -72,6 +71,20 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         super(GameObject, self).kill()
         self.unregister_all_event_handlers()
         
+    def move(self,dx,dy):
+        oldx, oldy, oldrect = self.x, self.y, self.rect
+        self.x+=dx
+        self.y+=dy
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+        collides=pygame.sprite.spritecollide(self,self.game.all,False)
+        can_move=True
+        for obj in collides:
+            if obj is not self:
+                can_move&=self.collide(obj)&obj.collide(self)
+        if not can_move:
+            self.x, self.y, self.rect = oldx, oldy, oldrect
+        return can_move
+
     def collide(self, other):
         """By default, it searches a method named 'collide_otherclassname' and calls it if exist.
         for example, if object implements method named 'collide_Player', it would be called when player collides with this object.
@@ -94,6 +107,15 @@ class Bonus(GameObject):
         self.affect_player(player)
         self.kill()
         return True #Player can move further
+        
+    def collide_Fire(self, fire):
+        self.kill()
+        return False
+        
+    def collide_Bomb(self, bomb):
+        self.kill()
+        self.affect_player(bomb.player)
+        return True
 
     def affect_player(self, player):
         """Makes something fun with player.
@@ -189,13 +211,22 @@ class Bomb(GameObject):
     '''A class introducing Bomb, which can be put by player'''
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time=80
+        self.time=400//self.game.config['general']['framerate']]
+        self.startup_timer
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('bomb.png')
 
     def collide_Player(self, player):
         #Lex: what is it supposed to do?
         if player.can_move_bombs:pass
+        
+    def collide_Fire(self, fire):
+        self.kill()
+        return False
+        
+    def collide_Bomb(self, bomb):
+        return False
+
 
     def explode(self):
         '''Makes current bomb explode and releases the fire'''
@@ -248,7 +279,7 @@ class Fire(GameObject):
     '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time = 3
+        self.time = 150//self.game.config['general']['framerate']]
         super(Fire, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('fire.jpg')
         super(Fire, self).update()
@@ -259,13 +290,28 @@ class Fire(GameObject):
         if self.time<0:
             self.kill()
 
+    def collide_Player(self, player):
+        return False #Player can move further
+
+    def collide_Fire(self, fire):
+        return True
+        
+    def collide_Bomb(self, bomb):
+        return False
+
 
 class Wall(GameObject):
     '''An obstacle which player can not get through.'''
     image_files = ['wall.jpg']
 
     def collide_Player(self, player):
-        return False #player can not move further
+        return False
+
+    def collide_Fire(self, fire):
+        return False
+        
+    def collide_Bomb(self, bomb):
+        return False
 
 
 class Box(Wall):
@@ -278,6 +324,15 @@ class Box(Wall):
         #Only good bonuses by now
         w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus])
         if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
+        return False
+    
+    def collide_Player(self, player):
+        return False 
+
+    def collide_Bomb(self, bomb):
+        self.kill()
+        self.affect_player(bomb.player)
+        return True
 
 
 class Player(GameObject):
@@ -288,11 +343,23 @@ class Player(GameObject):
         self.game, self.id = game,id
         self.cur_pic = self.cur_line = 0
         if Player.player_images == None: self.create_images()
-        self.bombs, self.speed, self.radius, self.kills = 1, 0.1, 1, 0
+        self.bombs, self.speed, self.radius, self.kills = 1, 5.0, 1, 0
         self.dest = None
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = Player.player_images[id][0][0]
+
+    def collide_Player(self, player):
+        return True #Player can move further
+
+    def collide_Fire(self, fire):
+        self.kill()
+        return True
+        
+    def collide_Bomb(self, bomb):
+        self.kill()
+        self.affect_player(bomb.player)
+        return True
 
     def create_images(self):
         Player.player_images = [dirs for dirs in os.listdir(os.path.join('Data','players'))]
@@ -307,17 +374,21 @@ class Player(GameObject):
         self.pic = 0
 
     def go_up(self):
-        self.move_forward([0, -self.speed])
+        self.move_forward([0, -self.speed/self.game.config['general']['framerate']])
+        self.cur_line = 3
     
     def go_down(self):
-        self.move_forward([0,self.speed])
-
+        self.move_forward([0,self.speed/self.game.config['general']['framerate']])
+        self.cur_line = 0
+        
     def go_left(self):
-        self.move_forward([-self.speed,0])
-
+        self.move_forward([-self.speed/self.game.config['general']['framerate'],0])
+        self.cur_line = 1
+        
     def go_right(self):
-        self.move_forward([self.speed,0])
-
+        self.move_forward([self.speed/self.game.config['general']['framerate'],0])
+        self.cur_line = 2
+ 
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if self.bombs>0:
@@ -331,28 +402,11 @@ class Player(GameObject):
     def update(self):
         '''Moves player to his destination and checks whether he accepted any bonuses'''
         if self.dest != None:
-            self.x += self.dest[0]
-            self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-            if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
-                self.x-=self.dest[0]
-            self.y += self.dest[1]
-            self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-            if len(pygame.sprite.spritecollide(self,self.game.obstacles,False))!=0:
-                self.y-=self.dest[1]
-            if self.dest[1]>0: self.cur_line = 0
-            if self.dest[1]<0: self.cur_line = 3
-            if self.dest[0]>0: self.cur_line = 2
-            if self.dest[0]<0: self.cur_line = 1
+            self.move(self.dest[0],self.dest[1])    
             self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line])
             self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
         else:
             self.image = Player.player_images[self.id][0][0]
-            
-        bonus=pygame.sprite.spritecollide(self,self.game.bonuses,True)
-        if len(bonus)>0:
-            for x in bonus:
-                x.affect_player(self)
-        super(Player, self).update()
 
     def move_up_to(self):
         '''Function for truncating the player added for easier getting to the position'''
