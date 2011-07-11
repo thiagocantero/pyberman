@@ -17,31 +17,30 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     '''
     #: list of file names of images to load
     image_files=[]
-    image_dict={}
 
     def __init__(self, game, x, y, groups=None):
         self.game = game
-        self.x, self.y = x,y
+        self.x = x
+        self.y = y
+        if not hasattr(self, 'rect'):
+            self.update_rect()
         super(GameObject, self).__init__(*(groups if groups is not None else []))
         #Sprite doesn't call super, so we have o do it manually in order for AUtoListeningObject gets initialized
         events.AutoListeningObject.__init__(self)
         self.images=[]
-        if self.__class__.__name__ in self.image_dict:
-            self.image=self.image_dict[self.__class__][0]
-        else:
-            if self.image_files:
-                for f in self.image_files:
-                    self.images.append(self.load_image(f))
-            self.image_dict[self.__class__]=self.images
-            if self.images:
-                self.image = self.images[0]
-                
-    
+        for f in self.image_files:
+            self.images.append(self.load_image(f))
+        if self.images:
+            self.image = self.images[0]
+
+    def update_rect(self):
+        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+
     def update(self):
         """Updates the object's state.
         It is called on each core frame."""
         if self.image is not None:
-            self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+            self.update_rect()
 
     @property
     def width(self):
@@ -50,9 +49,16 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     @property
     def height(self):
         return self.game.side-1
-    
+
     def load_image(self, file_name):
-        return pygame.transform.smoothscale(pygame.image.load(os.path.join(IMAGE_DIR, file_name)), (self.width, self.height))
+        """Manages caching and transformation of image."""
+        cache = getattr(self.__class__, '_image_cache', {})
+        image = cache.get(file_name, None)
+        if image is None:
+            image = pygame.transform.smoothscale(pygame.image.load(os.path.join(IMAGE_DIR, file_name)), (self.width, self.height))
+            cache[file_name] = image
+            setattr(self.__class__, '_image_cache', cache)
+        return image
 
     @property
     def screen_x(self):
@@ -79,11 +85,11 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
 
 class Bonus(GameObject):
     '''Represents an item which affects the player on collision and then disappears.'''
-    
+
     def __init__(self, game, x, y, groups=None):
         super(Bonus,self).__init__(game, x, y, groups)
         self.cur_ind = 0
-    
+
     def collide_Player(self, player):
         self.affect_player(player)
         self.kill()
@@ -96,63 +102,42 @@ class Bonus(GameObject):
 
     def update(self):
         self.cur_ind = (self.cur_ind + 1) % len(self.image_files)
-        self.image = self.load_image(self.image_files[self.cur_ind])
+        self.image = self.images[self.cur_ind]
         super(Bonus,self).update()
-        
 
 class SpeedUpBonus(Bonus):
     '''Class representing bonus, increasing the player's speed by 0.05'''
-    
     image_files=[os.path.join('bon_speed','1.png'),os.path.join('bon_speed','2.png'),os.path.join('bon_speed','3.png'),os.path.join('bon_speed','4.png')]
 
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(SpeedUpBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
     def affect_player(self, player):
         player.speed+=0.05
 
-        
+
 class AddBombBonus(Bonus):
     '''Class representing bonus, increasing the capacity of player's bombs by one'''
-    
     image_files=[os.path.join('bon_add','1.png'),os.path.join('bon_add','2.png'), os.path.join('bon_add','3.png'),os.path.join('bon_add','4.png')]
-    
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(AddBombBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
+
     def affect_player(self, player):
         player.bombs += 1
 
-        
+
 class MoveBombsBonus(Bonus) :
     '''Class representing bonus, allowing the player to move the bomb'''
-
     image_files=[os.path.join('bon_move','1.png'),os.path.join('bon_move','2.png'),os.path.join('bon_move','3.png'),os.path.join('bon_move','4.png')]
     #action of this class is still undone
 
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(MoveBombsBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
     def affect_player(self, player):
         player.can_move_bombs = True
 
 
 class IncreaseRadiusBonus(Bonus):
     '''Class representing bonus, increasing the radius of a player by one'''
-
     image_files=[os.path.join('bon_inc','1.png'),os.path.join('bon_inc','2.png'), os.path.join('bon_inc','3.png'),os.path.join('bon_inc','4.png')]
 
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(IncreaseRadiusBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
     def affect_player(self, player):
         player.radius += 1
 
-        
+
 class BadBonus(Bonus):
     '''Class representing bad bonus, that have their period of impact over the player'''
     image_files=[os.path.join('bon_bad','1.png'),os.path.join('bon_bad','2.png'), os.path.join('bon_bad','3.png'), os.path.join('bon_bad','4.png')]
@@ -160,7 +145,7 @@ class BadBonus(Bonus):
         # here timer is
         pass
 
-        
+
 class SpeedDownBonus(BadBonus):
     '''Class representing bad bonus, decreasing speed to minimum for a while'''
     def affect_player(self, player):
@@ -169,49 +154,37 @@ class SpeedDownBonus(BadBonus):
         #timer needed
         player.speed = speed_temp
 
-        
+
 class ReduceRadiusBonus(BadBonus):
     '''Class representing bad bonus, reducing radius to minimum for a while'''
-    
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(ReduceRadiusBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
+
     def affect_player(self, player):
         radius_temp = player.radius
         player.radius = 1
         self.time = 150
         #not done yet
         player.radius = radius_temp
-        
+
     def update(self):
         self.time-=1
         if self.time==0:
             kill(self)
-                    
         super(Bomb, self).update()
-        
-        
+
 
 class ExchangePlacesBonus(BadBonus):
     '''Class representing bad bonus, when player changes place with random other player'''
-    def __init__(self,game,x,y,*args,**kwargs):
-        super(ExchangePlacesBonus, self).__init__(game, x,y, *args, **kwargs)
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
-        
+
     def affect_player(self, player):
         tempx, tempy = player.x, player.y
-        print self.game.players[:self.game.players_alive - 1]
-        print self.game.players
-        print self.game.available
-        print 
         rand_player = random.choice(self.game.players[:self.game.players_alive ])
         while rand_player == player:  rand_player=random.choice(self.game.players[:self.game.players_alive])
         player.x = rand_player.x
         player.y = rand_player.y
         rand_player.x = tempx
         rand_player.y = tempy
-        
+
+
 class Bomb(GameObject):
     '''A class introducing Bomb, which can be put by player'''
     def __init__(self, player, game, x, y, *args, **kwargs):
@@ -219,12 +192,11 @@ class Bomb(GameObject):
         self.time=80
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('bomb.png')
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def collide_Player(self, player):
         #Lex: what is it supposed to do?
         if player.can_move_bombs:pass
-    
+
     def explode(self):
         '''Makes current bomb explode and releases the fire'''
         self.kill()
@@ -242,6 +214,7 @@ class Bomb(GameObject):
         for yy in range(int(round(self.y)-1),int(round(self.y)-self.player.radius-1),-1):
             if yy>0 and self.check(round(self.x),yy): break
             
+
     def check(self,dx,dy):
         '''Checks if fire can move futher'''
         ret=False
@@ -261,7 +234,7 @@ class Bomb(GameObject):
             fire.kill()
             ret=True
         return ret
-            
+
     def update(self):
         self.time-=1
         if self.time < 12:  
@@ -269,7 +242,8 @@ class Bomb(GameObject):
                 self.explode()
             else: self.image = self.load_image(os.path.join('bomb','%s.png'%str(self.time)))
         super(Bomb, self).update()
-    
+
+
 class Fire(GameObject):
     '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
@@ -278,12 +252,13 @@ class Fire(GameObject):
         super(Fire, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('fire.jpg')
         super(Fire, self).update()
-    
+
     def update(self):
         '''As fire exists 3 reloads, it's durance decreases'''
         self.time-=1
         if self.time<0:
             self.kill()
+
 
 class Wall(GameObject):
     '''An obstacle which player can not get through.'''
@@ -304,10 +279,11 @@ class Box(Wall):
         w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus])
         if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
 
+
 class Player(GameObject):
     '''Represents a player in the game.'''
     player_images = None
-    
+
     def __init__(self, game, x, y, id, *args, **kwargs):
         self.game, self.id = game,id
         self.cur_pic = self.cur_line = 0
@@ -317,7 +293,6 @@ class Player(GameObject):
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = Player.player_images[id][0][0]
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def create_images(self):
         Player.player_images = [dirs for dirs in os.listdir(os.path.join('Data','players'))]
@@ -330,29 +305,29 @@ class Player(GameObject):
             self.cur_pic = 0
         self.line = 0
         self.pic = 0
-    
+
     def go_up(self):
         self.move_forward([0, -self.speed])
     
     def go_down(self):
         self.move_forward([0,self.speed])
-        
+
     def go_left(self):
         self.move_forward([-self.speed,0])
-        
+
     def go_right(self):
         self.move_forward([self.speed,0])
-    
+
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if self.bombs>0:
             self.bombs-=1
             Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
-    
+
     def move_forward(self, dest):
         '''Moves player to his destination'''
         self.dest = dest
-        
+
     def update(self):
         '''Moves player to his destination and checks whether he accepted any bonuses'''
         if self.dest != None:
@@ -378,9 +353,8 @@ class Player(GameObject):
             for x in bonus:
                 x.affect_player(self)
         super(Player, self).update()
-    
+
     def move_up_to(self):
         '''Function for truncating the player added for easier getting to the position'''
         self.x=round(self.x)
         self.y=round(self.y)
-        

@@ -1,4 +1,5 @@
 import sys
+import os
 import pygame
 from pygame.locals import *
 import glob
@@ -11,12 +12,13 @@ class TextBox(GameObject):
         self.strings=strings
         self.title  = title
         self.text_size = 50
+        self.game = game # Magic! don't touch
+        self.rect = pygame.rect.Rect(0, 0, self.width, self.height)
         super(TextBox, self).__init__(game, 0, 0, groups=[game.all])
         self.background = self.load_image('menu.jpg')
         self.image=pygame.Surface((self.width,self.height))
         self.text_font = pygame.font.Font(None, self.text_size)
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
-        self.rect = pygame.rect.Rect(0, 0, self.width, self.height)
 
     @property
     def width(self):
@@ -50,7 +52,8 @@ class Menu(TextBox):
         self.menu_length=len(str_func)
         super(Menu, self).__init__(game, title, strings)
         self.current=0
-    
+        self.menu_click = pygame.mixer.Sound(os.path.join('Data', 'click.ogg'))
+
     @property
     def lines_count(self):
         return super(Menu,self).lines_count+self.menu_length
@@ -68,10 +71,10 @@ class Menu(TextBox):
     
     def event_keydown(self,event):
         if event.key==K_DOWN:
-            self.game.menu_click.play()
+            self.menu_click.play()
             self.current=(self.current+1)%self.menu_length
         elif event.key==K_UP:
-            self.game.menu_click.play()
+            self.menu_click.play()
             self.current=(self.current-1)%self.menu_length
         elif event.key==K_RETURN: self.str_func[self.current][1]()
             
