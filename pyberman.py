@@ -31,7 +31,6 @@ class Game(events.AutoListeningObject):
         pygame.init()
         pygame.mixer.init()
         self.menu_sound = pygame.mixer.Sound('Data\\Pandemonium.ogg')
-        self.menu_click = pygame.mixer.Sound('Data\\click.ogg')
         self.explosions = [pygame.mixer.Sound('Data\\explosion.ogg'),pygame.mixer.Sound('Data\\explosion2.ogg'),pygame.mixer.Sound('Data\\explosion3.ogg')]
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
@@ -141,7 +140,7 @@ class Game(events.AutoListeningObject):
         self.players_alive=2
         
     def redraw(self):
-        '''Redraws the level. It is called each core pumb'''
+        """Redraws the level. It is called each core pumb"""
         #self.surface.blit(self.ground, (0,0))
         self.surface.fill((0,0,0))
         self.all.draw(self.surface)
