@@ -4,6 +4,7 @@
 '''Game objects.'''
 
 import os
+from weakref import WeakSet 
 import pygame
 import events
 import random
@@ -31,6 +32,7 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
             self.images.append(self.load_image(f))
         if self.images:
             self.image = self.images[0]
+        self._last_collided = WeakSet ()
 
     def update_rect(self):
         self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
@@ -72,10 +74,11 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         self.unregister_all_event_handlers()
         
     def move(self,dx,dy):
+        """Manages collision detection on movement."""
         oldx, oldy, oldrect = self.x, self.y, self.rect
         self.x+=dx
         self.y+=dy
-        self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
+        self.update_rect()
         collides=pygame.sprite.spritecollide(self,self.game.all,False)
         can_move=True
         for obj in collides:
@@ -83,6 +86,11 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
                 can_move&=self.collide(obj)&obj.collide(self)
         if not can_move:
             self.x, self.y, self.rect = oldx, oldy, oldrect
+        collides = WeakSet (collides)
+        stop_colliding = self._last_collided-collides
+        for obj in stop_colliding:
+            obj.stop_colliding(self)
+        self._last_collided=collides
         return can_move
 
     def collide(self, other):
@@ -94,6 +102,11 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         func = getattr(self, 'collide_%s'%other.__class__.__name__, None)
         if func is not None:
             return func(other)  
+        return True
+
+    def stop_colliding(self, other):
+        """Called when obj moves out of self."""
+        pass
 
 
 class Bonus(GameObject):
@@ -209,24 +222,30 @@ class ExchangePlacesBonus(BadBonus):
 
 class Bomb(GameObject):
     '''A class introducing Bomb, which can be put by player'''
+    image_files = ['bomb.png']
+
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time=400//self.game.config['general']['framerate']]
-        self.startup_timer
+        self.time=1000#400//self.game.config['general']['framerate']
+        self.player_first_stands = True
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
-        self.image = self.load_image('bomb.png')
 
     def collide_Player(self, player):
-        #Lex: what is it supposed to do?
-        if player.can_move_bombs:pass
-        
+        if self.player_first_stands: 
+            return True
+        else:
+            return False
+
+    def stop_colliding(self, obj):
+        if isinstance(obj, Player):
+            self.player_first_stands = False
+
     def collide_Fire(self, fire):
         self.kill()
         return False
-        
+
     def collide_Bomb(self, bomb):
         return False
-
 
     def explode(self):
         '''Makes current bomb explode and releases the fire'''
@@ -244,7 +263,6 @@ class Bomb(GameObject):
 
         for yy in range(int(round(self.y)-1),int(round(self.y)-self.player.radius-1),-1):
             if yy>0 and self.check(round(self.x),yy): break
-            
 
     def check(self,dx,dy):
         '''Checks if fire can move futher'''
@@ -279,7 +297,7 @@ class Fire(GameObject):
     '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time = 150//self.game.config['general']['framerate']]
+        self.time = 150//self.game.config['general']['framerate']
         super(Fire, self).__init__(game, x,y, *args, **kwargs)
         self.image = self.load_image('fire.jpg')
         super(Fire, self).update()
@@ -354,11 +372,6 @@ class Player(GameObject):
 
     def collide_Fire(self, fire):
         self.kill()
-        return True
-        
-    def collide_Bomb(self, bomb):
-        self.kill()
-        self.affect_player(bomb.player)
         return True
 
     def create_images(self):
