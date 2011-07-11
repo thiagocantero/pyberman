@@ -103,7 +103,7 @@ class Bonus(GameObject):
 class SpeedUpBonus(Bonus):
     '''Class representing bonus, increasing the player's speed by 0.05'''
     
-    image_files=['bon_speed\\1.png','bon_speed\\2.png','bon_speed\\3.png','bon_speed\\4.png']
+    image_files=[os.path.join('bon_speed','1.png'),os.path.join('bon_speed','2.png'),os.path.join('bon_speed','3.png'),os.path.join('bon_speed','4.png')]
 
     def __init__(self,game,x,y,*args,**kwargs):
         super(SpeedUpBonus, self).__init__(game, x,y, *args, **kwargs)
@@ -116,7 +116,7 @@ class SpeedUpBonus(Bonus):
 class AddBombBonus(Bonus):
     '''Class representing bonus, increasing the capacity of player's bombs by one'''
     
-    image_files=['bon_add\\1.png','bon_add\\2.png','bon_add\\3.png','bon_add\\4.png']
+    image_files=[os.path.join('bon_add','1.png'),os.path.join('bon_add','2.png'), os.path.join('bon_add','3.png'),os.path.join('bon_add','4.png')]
     
     def __init__(self,game,x,y,*args,**kwargs):
         super(AddBombBonus, self).__init__(game, x,y, *args, **kwargs)
@@ -129,7 +129,7 @@ class AddBombBonus(Bonus):
 class MoveBombsBonus(Bonus) :
     '''Class representing bonus, allowing the player to move the bomb'''
 
-    image_files=['bon_move\\1.png','bon_move\\2.png','bon_move\\3.png','bon_move\\4.png']
+    image_files=[os.path.join('bon_move','1.png'),os.path.join('bon_move','2.png'),os.path.join('bon_move','3.png'),os.path.join('bon_move','4.png')]
     #action of this class is still undone
 
     def __init__(self,game,x,y,*args,**kwargs):
@@ -143,7 +143,7 @@ class MoveBombsBonus(Bonus) :
 class IncreaseRadiusBonus(Bonus):
     '''Class representing bonus, increasing the radius of a player by one'''
 
-    image_files=['bon_inc\\1.png','bon_inc\\2.png','bon_inc\\3.png','bon_inc\\4.png']
+    image_files=[os.path.join('bon_inc','1.png'),os.path.join('bon_inc','2.png'), os.path.join('bon_inc','3.png'),os.path.join('bon_inc','4.png')]
 
     def __init__(self,game,x,y,*args,**kwargs):
         super(IncreaseRadiusBonus, self).__init__(game, x,y, *args, **kwargs)
@@ -155,7 +155,7 @@ class IncreaseRadiusBonus(Bonus):
         
 class BadBonus(Bonus):
     '''Class representing bad bonus, that have their period of impact over the player'''
-    image_files=['bon_bad\\1.png','bon_bad\\2.png','bon_bad\\3.png','bon_bad\\4.png']
+    image_files=[os.path.join('bon_bad','1.png'),os.path.join('bon_bad','2.png'), os.path.join('bon_bad','3.png'), os.path.join('bon_bad','4.png')]
     def affect_player(self, player):
         # here timer is
         pass
@@ -267,7 +267,7 @@ class Bomb(GameObject):
         if self.time < 12:  
             if self.time==0:
                 self.explode()
-            else: self.image = self.load_image('bomb\\%s.png'%str(self.time))
+            else: self.image = self.load_image(os.path.join('bomb','%s.png'%str(self.time)))
         super(Bomb, self).update()
     
 class Fire(GameObject):
@@ -320,11 +320,11 @@ class Player(GameObject):
         self.rect = pygame.rect.Rect(self.screen_x, self.screen_y, self.width, self.height)
 
     def create_images(self):
-        Player.player_images = [dirs for dirs in os.listdir('Data\\players')]
-        for dirs in os.listdir('Data\\players'):
-            Player.player_images[self.cur_line] = [dir for dir in sorted(os.listdir(os.path.join('Data\\players',dirs)))]
-            for dir in os.listdir(os.path.join('Data\\players',dirs)):
-                Player.player_images[self.cur_line][self.cur_pic] = [self.load_image(os.path.join('players',dirs,dir,filename)) for filename in os.listdir(os.path.join('Data\\players',dirs,dir))]
+        Player.player_images = [dirs for dirs in os.listdir(os.path.join('Data','players'))]
+        for dirs in os.listdir(os.path.join('Data','players')):
+            Player.player_images[self.cur_line] = [dir for dir in sorted(os.listdir(os.path.join('Data','players',dirs)))]
+            for dir in os.listdir(os.path.join('Data','players',dirs)):
+                Player.player_images[self.cur_line][self.cur_pic] = [self.load_image(os.path.join('players',dirs,dir,filename)) for filename in os.listdir(os.path.join('Data','players',dirs,dir))]
                 self.cur_pic += 1
             self.cur_line += 1
             self.cur_pic = 0

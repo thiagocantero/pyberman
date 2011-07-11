@@ -7,6 +7,7 @@ It really works!
 '''
 
 import sys
+import os
 import random
 import pygame
 from pygame.locals import *
@@ -36,9 +37,9 @@ class Game(events.AutoListeningObject):
         '''Initializes the game.'''
         pygame.init()
         pygame.mixer.init()
-        self.menu_sound = pygame.mixer.Sound('Data\\Pandemonium.ogg')
-        self.menu_click = pygame.mixer.Sound('Data\\click.ogg')
-        self.explosions = [pygame.mixer.Sound('Data\\explosion.ogg'),pygame.mixer.Sound('Data\\explosion2.ogg'),pygame.mixer.Sound('Data\\explosion3.ogg')]
+        self.menu_sound = pygame.mixer.Sound(os.path.join('Data','Pandemonium.ogg'))
+        self.menu_click = pygame.mixer.Sound(os.path.join('Data','click.ogg'))
+        self.explosions = [pygame.mixer.Sound(os.path.join('Data','explosion.ogg')),pygame.mixer.Sound(os.path.join('Data','explosion2.ogg')),pygame.mixer.Sound(os.path.join('Data','explosion3.ogg'))]
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         # use default resolution
@@ -51,7 +52,7 @@ class Game(events.AutoListeningObject):
         self.available=[]
         self.players=[None]*10
         self.players_alive=2
-        self.ground = pygame.image.load('Data\\ground.jpg')
+        self.ground = pygame.image.load(os.path.join('Data','ground.jpg'))
         #: Whether the main loop should run
         self.done = False
         super(Game, self).__init__()
