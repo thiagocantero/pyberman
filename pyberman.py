@@ -7,12 +7,12 @@ It really works!
 '''
 
 import sys
-import os
 import random
 import pygame
 from pygame.locals import *
 from gameobjects import *
 from ui import MainMenu
+from ui import Score
 import events
 import controller
 
@@ -23,23 +23,16 @@ class Game(events.AutoListeningObject):
     '''
     _instance = None
     #Todo: implement reading from a config file
-    config = {
-        'screen': {
-            #'width': 800
-            #'height': 600
-            },
-        'general': {
-            'framerate': 50,
-            }
-        }
+    config = {'general':
+             {'framerate': 50}}
 
     def __init__(self):
         '''Initializes the game.'''
         pygame.init()
         pygame.mixer.init()
-        self.menu_sound = pygame.mixer.Sound(os.path.join('Data','Pandemonium.ogg'))
-        self.menu_click = pygame.mixer.Sound(os.path.join('Data','click.ogg'))
-        self.explosions = [pygame.mixer.Sound(os.path.join('Data','explosion.ogg')),pygame.mixer.Sound(os.path.join('Data','explosion2.ogg')),pygame.mixer.Sound(os.path.join('Data','explosion3.ogg'))]
+        self.menu_sound = pygame.mixer.Sound('Data\\Pandemonium.ogg')
+        self.menu_click = pygame.mixer.Sound('Data\\click.ogg')
+        self.explosions = [pygame.mixer.Sound('Data\\explosion.ogg'),pygame.mixer.Sound('Data\\explosion2.ogg'),pygame.mixer.Sound('Data\\explosion3.ogg')]
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         # use default resolution
@@ -48,11 +41,10 @@ class Game(events.AutoListeningObject):
         self.screen_width = pygame.display.Info().current_w
         self.controller = None
         self.create_groups()
-        self.players_available = 0
-        self.available=[]
+        self.players_score=[0]*10
         self.players=[None]*10
-        self.players_alive=2
-        self.ground = pygame.image.load(os.path.join('Data','ground.jpg'))
+        self.player_names=['Player %s'%num for num in range(10)]
+        self.ground = pygame.image.load('Data\\ground.jpg')
         #: Whether the main loop should run
         self.done = False
         super(Game, self).__init__()
@@ -74,7 +66,9 @@ class Game(events.AutoListeningObject):
             self.redraw()  
             pygame.display.flip()
             if self.players_alive<2:
-                self.event_quit(event)
+                for x in self.all: x.kill()
+                self.create_groups()
+                Score(self)
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
         
@@ -86,7 +80,7 @@ class Game(events.AutoListeningObject):
     def event_quit(self, event):
         '''Finish the main loop'''
         self.done = True
-
+    
     def load_level(self, filename, num):
         '''Loads the chosen map for a needed amount of players'''
         self.players_alive=num
@@ -116,6 +110,7 @@ class Game(events.AutoListeningObject):
             if row_num<self.height-1:
                 raise RuntimeError('Insuficient number of rows')
         #Random generating of places where players may appear
+        self.players=[None]*10
         for x in range(num):
             while self.players[x] is None:
                 y=random.choice(self.available)
@@ -141,6 +136,9 @@ class Game(events.AutoListeningObject):
         self.destroyable = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
         self.bonuses = pygame.sprite.Group()
+        self.players_available = 0
+        self.available=[]
+        self.players_alive=2
         
     def redraw(self):
         '''Redraws the level. It is called each core pumb'''

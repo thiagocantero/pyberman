@@ -6,31 +6,17 @@ import os
 from gameobjects import GameObject 
 import events
 
-class Menu(GameObject):
-    '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
-        It's a class which is responsible for creating GameObject called Menu, which will
-        be showed on the screen in the main loop
-    '''
-    def __init__(self, game, str_func, title):
-        '''
-        @param str_func: list of tuples(str,func), where str is displayed name, func is callable function
-        @type str_func:list
-        @param title: title of the current menu
-        @type title:str
-        '''
-        self.str_func=str_func
+class TextBox(GameObject):
+    def __init__(self, game, title, strings):
+        self.strings=strings
         self.title  = title
         self.text_size = 50
-        self.menu_length=len(self.str_func)
-        super(Menu, self).__init__(game, 0, 0, groups=[game.all])
+        super(TextBox, self).__init__(game, 0, 0, groups=[game.all])
         self.background = self.load_image('menu.jpg')
         self.image=pygame.Surface((self.width,self.height))
         self.text_font = pygame.font.Font(None, self.text_size)
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
         self.rect = pygame.rect.Rect(0, 0, self.width, self.height)
-        #abs_height is computed in the way that all items of menu would be centralized
-        self.abs_height=(self.height-self.menu_length*self.text_size)//2
-        self.current=0
 
     @property
     def width(self):
@@ -40,12 +26,45 @@ class Menu(GameObject):
     def height(self):
         return self.game.screen_height
         
+    @property
+    def lines_count(self):
+        return len(self.strings)
+    
+    @property
+    def abs_height(self):
+        return (self.height-(self.lines_count)*self.text_size)//2
+        
+    def update(self):
+        pass
+
+        
+class Menu(TextBox):
+    '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
+        It's a class which is responsible for creating GameObject called Menu, which will
+        be showed on the screen in the main loop
+    '''
+    def __init__(self, game, str_func, title, strings=[]):
+        '''@param str_func: list of tuples(str,func), where str is displayed name, func is callable function   @type str_func:list
+           @param title: title of the current menu                                                             @type title:str     '''
+        self.str_func=str_func
+        self.menu_length=len(str_func)
+        super(Menu, self).__init__(game, title, strings)
+        self.current=0
+    
+    @property
+    def lines_count(self):
+        return super(Menu,self).lines_count+self.menu_length
+    
     def update(self):
         self.image.blit(self.background,(0,0))
         self.image.blit(self.rendered_title,((self.width-self.rendered_title.get_width())//2,self.text_size))
+        
+        for number,text in enumerate(self.strings):
+            self.image.blit(self.text_font.render(text, True, (0,128,255)),(self.width//2,self.abs_height+number*self.text_size))
+        
         for number,(text,func) in enumerate(self.str_func):
-            if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+number*self.text_size))
-            else: self.image.blit(self.text_font.render(text, True, (0,154,205)),(self.width//2,self.abs_height+number*self.text_size))
+            if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
+            else: self.image.blit(self.text_font.render(text, True, (0,154,205)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
     
     def event_keydown(self,event):
         if event.key==K_DOWN:
@@ -63,8 +82,9 @@ class MainMenu(Menu):
         self.items=(
             ('Start Local Game', self.start_local_game), 
             ('Start Network Game', None), 
-            ('Join Network Game', None), 
-            ('Credits', None), 
+            ('Join Network Game', None),
+            ('Settings', self.settings),
+            ('Credits', self.credits), 
             ('Quit', self.quit)
         )
         super(MainMenu, self).__init__(game, self.items, 'Main Menu') 
@@ -72,10 +92,18 @@ class MainMenu(Menu):
     def start_local_game(self):
         self.kill()
         ChooseLevelMenu(self.game, 2)
-
+    
+    def settings(self):
+        self.kill()
+        SettingsMenu(self.game)
+    
     def quit(self):
         events.Event.process_event(events.QuitEvent(self))
 
+    def credits(self):
+        self.kill()
+        CreditsMenu(self.game)
+        
 
 class ChooseLevelMenu(Menu):
     '''This menu is shown on a game startup'''
@@ -98,3 +126,120 @@ class ChooseLevelMenu(Menu):
     def load_level(self):
         self.kill()
         self.game.load_level(self.file_names[self.current], self.players)
+
+
+class CreditsMenu(Menu):
+    '''This menu is a credits menu'''
+    def __init__(self, game):
+        self.items=(
+            ('Back', self.back),
+        )
+        super(CreditsMenu, self).__init__(game, self.items, 'Credits',['Done by:','Oleksiy Sadoviy','Myroslava Stavnycha','Zakhar Gerych','Skrynnikova Anastasiya']) 
+
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
+        
+
+class SettingsMenu(Menu):
+    '''This menu is a settings menu'''
+    def __init__(self, game):
+        self.items=(
+            ('Player1', self.set_name0),
+            ('Player2', self.set_name1),
+            ('Back', self.back),
+        )
+        super(SettingsMenu, self).__init__(game, self.items, 'Settings') 
+
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
+        
+    def set_name0(self):
+        self.kill()
+        ChoosePlayerName(self.game,0)
+
+    def set_name1(self):
+        self.kill()
+        ChoosePlayerName(self.game,1)
+        
+class Score(Menu):
+    '''Shows score after the game''' 
+    def __init__(self, game):
+        self.game=game
+        self.items=(
+            ('Next Level', self.start_local_game), 
+            ('Quit', self.quit)
+        )
+        self.strings=[]
+        for player in self.game.players:
+            if player is not None:
+                self.strings.append('%s        %s'%(self.game.player_names[player.id], self.game.players_score[player.id]))
+        super(Score, self).__init__(self.game, self.items, 'Score', self.strings) 
+
+    def start_local_game(self):
+        self.kill()
+        ChooseLevelMenu(self.game, 2)
+
+    def quit(self):
+        events.Event.process_event(events.QuitEvent(self))
+        
+
+class EditBox(TextBox):
+    '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
+        It's a class which is responsible for creating GameObject called Menu, which will
+        be showed on the screen in the main loop
+    '''
+    def __init__(self, game, inp , title, func, strings=[]):
+        '''@param inp: inp is parametr which we want to change    @type inp:str
+           @param title: title of the current editbox             @type title:str     '''
+        self.inp = inp
+        self.func = func
+        super(EditBox, self).__init__(game, title, strings)
+        self.cur_pos=len(inp)
+        
+    @property
+    def lines_count(self):
+        return super(EditBox,self).lines_count+1
+    
+    def update(self):
+        self.image.blit(self.background,(0,0))
+        self.image.blit(self.rendered_title,((self.width-self.rendered_title.get_width())//2,self.text_size))
+        
+        for number,text in enumerate(self.strings):
+            self.image.blit(self.text_font.render(text, True, (0,128,255)),(self.width//2,self.abs_height+self.text_size))
+        self.image.blit(self.text_font.render(self.inp, True, (255,0,0)),(self.width//2,self.abs_height+self.text_size*self.lines_count))
+            
+        
+    def event_keydown(self,event):
+        if event.key==K_LEFT:
+            if self.cur_pos>0: self.cur_pos-=1
+        elif event.key==K_RIGHT:
+            if self.cur_pos<len(self.inp): self.cur_pos+=1
+        elif event.key==K_HOME:
+            self.cur_pos=0
+        elif event.key==K_END:
+            self.cur_pos=len(self.inp)
+        elif event.key==K_RETURN: self.func()
+        elif event.key==K_BACKSPACE: 
+            if self.cur_pos>0: 
+                self.inp = self.inp[:self.cur_pos-1]+self.inp[self.cur_pos:]
+                self.cur_pos-=1
+        elif event.key==K_DELETE: 
+            if self.cur_pos<len(self.inp): 
+                self.inp = self.inp[:self.cur_pos]+self.inp[self.cur_pos+1:]
+        else:
+            self.inp=self.inp[:self.cur_pos]+event.unicode+self.inp[self.cur_pos:]
+            self.cur_pos+=1
+        
+class ChoosePlayerName(EditBox):
+    '''This menu is shown on a game startup'''
+    def __init__(self, game, id):
+        self.game = game
+        self.id=id
+        super(ChoosePlayerName, self).__init__(game, self.game.player_names[id], 'Player Naming', self.back, ['Choose the name of the player'])
+        
+    def back(self):
+        self.game.player_names[self.id]=self.inp
+        self.kill()
+        SettingsMenu(self.game)
