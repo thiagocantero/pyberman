@@ -81,7 +81,9 @@ class Game(events.AutoListeningObject):
     def event_keydown(self, event):
         if event.key==K_ESCAPE:
             event.stop_propagating = True
-            events.Event.process_event(events.QuitEvent(self))
+            self.create_groups()
+            MainMenu(self)
+            #events.Event.process_event(events.QuitEvent(self))
 
     def event_quit(self, event):
         '''Finish the main loop'''
