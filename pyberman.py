@@ -109,9 +109,7 @@ class Game(events.AutoListeningObject):
                     elif col == ' ': 
                         pass
                     elif col=='S':
-                        if self.players_available<num:
                             self.available.append((col_num,row_num))
-                        self.players_available+=1
                     else:
                         raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
                 if col_num<self.width-1:

@@ -200,7 +200,7 @@ class SpeedDownBonus(BadBonus):
     def affect_player(self, player):
         self.player = player
         self.speed_temp = player.speed
-        player.speed = 0.05
+        player.speed = 1
         self.affect = True
         #player.speed = speed_temp
         
@@ -243,7 +243,8 @@ class ExchangePlacesBonus(Bonus):
         player.y = rand_player.y
         rand_player.x = tempx
         rand_player.y = tempy
-
+        player.update_rect()
+        rand_player.update_rect()
 
 class Bomb(GameObject):
     '''A class introducing Bomb, which can be put by player'''
@@ -253,12 +254,15 @@ class Bomb(GameObject):
         self.player, self.game, self.x, self.y =player, game, x, y
         self.time=80#1//self.game.delta
         self.player_first_stands = True
+        self.dest=None
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
 
     def collide_Player(self, player):
         if self.player_first_stands: 
             return True
         else:
+            if player.can_move_bombs:
+                self.dest=player.cur_dest[:]
             return False
 
     def stop_colliding(self, obj):
@@ -300,7 +304,9 @@ class Bomb(GameObject):
                     obj.explode()
                 elif isinstance(obj,Player):
                     self.game.players_alive-=1
-                    self.player.kills+=1
+                    if obj is self.player: 
+                        self.game.players_score[obj.id]-=1
+                    else: self.game.players_score[obj.id]+=1
                 elif isinstance(obj,Box):
                     obj.collide_Fire()
             ret=True
@@ -310,6 +316,8 @@ class Bomb(GameObject):
         return ret
 
     def update(self):
+        if self.dest != None:
+            self.move(self.dest[0]*self.game.delta,self.dest[1]*self.game.delta)    
         self.time-=1
         if self.time < 12:  
             if self.time==0:
@@ -374,7 +382,6 @@ class Box(Wall):
 
     def collide_Bomb(self, bomb):
         self.kill()
-        self.affect_player(bomb.player)
         return True
 
 
@@ -386,7 +393,7 @@ class Player(GameObject):
         self.game, self.id = game,id
         self.cur_pic = self.cur_line = 0
         if Player.player_images == None: self.create_images()
-        self.bombs, self.speed, self.radius, self.kills, self.time_moving = 1, 4.0, 1, 0, 0
+        self.bombs, self.speed, self.radius, self.kills, self.time_moving = 1, 2.0, 1, 0, 0
         self.dest = None
         self.cur_dest=None
         self.can_move_bombs=False
@@ -397,6 +404,10 @@ class Player(GameObject):
         return True #Player can move further
 
     def collide_Fire(self, fire):
+        self.game.players_alive-=1
+        if self is fire.player: 
+            self.game.players_score[self.id]-=1
+        else: self.game.players_score[fire.player.id]+=1
         self.kill()
         return True
 
@@ -432,8 +443,7 @@ class Player(GameObject):
         if self.dest!=None:
             if self.time_moving==0:
                 self.time_moving = self.game.step_length/self.speed
-                self.cur_dest=self.dest
- 
+                self.cur_dest=[self.dest[0]*self.speed,self.dest[1]*self.speed]
     
     def stop(self):
         self.dest=None
@@ -454,7 +464,7 @@ class Player(GameObject):
         if self.dest != None:
             d=min(self.time_moving,self.game.delta)
             self.time_moving-=d
-            self.move(self.cur_dest[0]*d*self.speed,self.cur_dest[1]*d*self.speed)    
+            self.move(self.cur_dest[0]*d,self.cur_dest[1]*d)    
             self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line])
             self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
         else:
