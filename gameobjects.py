@@ -302,13 +302,10 @@ class Bomb(GameObject):
             for obj in destroyed:
                 if isinstance(obj,Bomb):
                     obj.explode()
-                elif isinstance(obj,Player):
-                    self.game.players_alive-=1
-                    if obj is self.player: 
-                        self.game.players_score[obj.id]-=1
-                    else: self.game.players_score[obj.id]+=1
                 elif isinstance(obj,Box):
-                    obj.collide_Fire()
+                    obj.collide_Fire(fire)
+                elif isinstance(obj,Player):
+                    obj.collide_Fire(fire)
             ret=True
         if len(pygame.sprite.spritecollide(fire,self.game.walls,False))>0: 
             fire.kill()
@@ -369,7 +366,7 @@ class Box(Wall):
     '''An obstacle which can be ruined by a bomb explosion.'''
     image_files = ['box.jpg']
 
-    def collide_Fire(self):
+    def collide_Fire(self,fire):
         '''When colliding fire, the wall may generate bonus''' 
         x=random.choice([True,False])
         #Only good bonuses by now
@@ -381,8 +378,7 @@ class Box(Wall):
         return False 
 
     def collide_Bomb(self, bomb):
-        self.kill()
-        return True
+        return False
 
 
 class Player(GameObject):
