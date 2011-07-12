@@ -25,7 +25,7 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         if not hasattr(self, 'rect'):
             self.update_rect()
         super(GameObject, self).__init__(*(groups if groups is not None else []))
-        #Sprite doesn't call super, so we have o do it manually in order for AUtoListeningObject gets initialized
+        #Sprite doesn't call super, so we have to do it manually in order for AutoListeningObject gets initialized
         events.AutoListeningObject.__init__(self)
         self.images=[]
         for f in self.image_files:
@@ -74,7 +74,7 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         self.unregister_all_event_handlers()
         
     def move(self,dx,dy):
-        """Manages collision detection on movement."""
+        '''Manages collision detection on movement.'''
         oldx, oldy, oldrect = self.x, self.y, self.rect
         self.x+=dx
         self.y+=dy
@@ -94,18 +94,18 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
         return can_move
 
     def collide(self, other):
-        """By default, it searches a method named 'collide_otherclassname' and calls it if exist.
+        '''By default, it searches a method named 'collide_otherclassname' and calls it if exist.
         for example, if object implements method named 'collide_Player', it would be called when player collides with this object.
         @returns: whether the movement can be continued
         @rtype: bool
-        """
+        '''
         func = getattr(self, 'collide_%s'%other.__class__.__name__, None)
         if func is not None:
             return func(other)  
         return True
 
     def stop_colliding(self, other):
-        """Called when obj moves out of self."""
+        '''Called when obj moves out of self.'''
         pass
 
 
@@ -141,11 +141,11 @@ class Bonus(GameObject):
         super(Bonus,self).update()
 
 class SpeedUpBonus(Bonus):
-    '''Class representing bonus, increasing the player's speed by 0.05'''
+    '''Class representing bonus, increasing the player's speed by 0.5'''
     image_files=[os.path.join('bon_speed','1.png'),os.path.join('bon_speed','2.png'),os.path.join('bon_speed','3.png'),os.path.join('bon_speed','4.png')]
 
     def affect_player(self, player):
-        player.speed+=0.05
+        player.speed+=0.5
 
 
 class AddBombBonus(Bonus):
@@ -226,7 +226,7 @@ class Bomb(GameObject):
 
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time=1000#400//self.game.config['general']['framerate']
+        self.time=80#1//self.game.delta
         self.player_first_stands = True
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
 
@@ -361,8 +361,9 @@ class Player(GameObject):
         self.game, self.id = game,id
         self.cur_pic = self.cur_line = 0
         if Player.player_images == None: self.create_images()
-        self.bombs, self.speed, self.radius, self.kills = 1, 5.0, 1, 0
+        self.bombs, self.speed, self.radius, self.kills, self.time_moving = 1, 4.0, 1, 0, 0
         self.dest = None
+        self.cur_dest=None
         self.can_move_bombs=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = Player.player_images[id][0][0]
@@ -387,21 +388,31 @@ class Player(GameObject):
         self.pic = 0
 
     def go_up(self):
-        self.move_forward([0, -self.speed/self.game.config['general']['framerate']])
+        self.move_forward([0, -1])
         self.cur_line = 3
     
     def go_down(self):
-        self.move_forward([0,self.speed/self.game.config['general']['framerate']])
+        self.move_forward([0, 1])
         self.cur_line = 0
         
     def go_left(self):
-        self.move_forward([-self.speed/self.game.config['general']['framerate'],0])
+        self.move_forward([-1, 0])
         self.cur_line = 1
         
     def go_right(self):
-        self.move_forward([self.speed/self.game.config['general']['framerate'],0])
+        self.move_forward([1, 0])
         self.cur_line = 2
+    
+    def step(self):
+        if self.dest!=None:
+            if self.time_moving==0:
+                self.time_moving = self.game.step_length/self.speed
+                self.cur_dest=self.dest
  
+    
+    def stop(self):
+        self.dest=None
+        
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if self.bombs>0:
@@ -413,9 +424,12 @@ class Player(GameObject):
         self.dest = dest
 
     def update(self):
+        self.step()
         '''Moves player to his destination and checks whether he accepted any bonuses'''
         if self.dest != None:
-            self.move(self.dest[0],self.dest[1])    
+            d=min(self.time_moving,self.game.delta)
+            self.time_moving-=d
+            self.move(self.cur_dest[0]*d,self.cur_dest[1]*d)    
             self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line])
             self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
         else:

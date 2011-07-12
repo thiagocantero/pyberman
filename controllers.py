@@ -40,11 +40,9 @@ class LocalController(events.AutoListeningObject):
     def event_keyup(self, event):
         '''Release of currect key'''
         if event.key in [K_UP,K_DOWN,K_LEFT,K_RIGHT]: 
-            self.player1.dest = None
-            self.player1.move_up_to()
+            self.player1.stop()
         elif event.key in [K_w,K_a,K_s,K_d]: 
-            self.player2.dest = None
-            self.player2.move_up_to()
+            self.player2.stop()
 
 
 class ClientChannel(Channel):

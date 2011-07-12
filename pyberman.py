@@ -42,6 +42,7 @@ class Game(events.AutoListeningObject):
         self.surface = pygame.display.set_mode((0,0), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         self.screen_height = pygame.display.Info().current_h
         self.screen_width = pygame.display.Info().current_w
+        self.step_length=0.25
         self.controller = None
         self.create_groups()
         self.players_score=[0]*10
@@ -66,6 +67,7 @@ class Game(events.AutoListeningObject):
         while not self.done:
             for event in pygame.event.get():
                 events.Event.process_event(events.event_from_pygame_event(self, event)) 
+            self.delta=clock.get_time()/1000.0
             self.update()
             self.redraw()  
             pygame.display.flip()
