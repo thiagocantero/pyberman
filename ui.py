@@ -77,6 +77,18 @@ class Menu(TextBox):
             self.menu_click.play()
             self.current=(self.current-1)%self.menu_length
         elif event.key==K_RETURN: self.str_func[self.current][1]()
+        
+    def event_mousemotion(self, event):
+        for line in range(self.menu_length):
+            if (pygame.mouse.get_pos()[0] in range(self.width//2, self.width//2 + len(self.str_func[line][0]) * self.text_size + 1) and pygame.mouse.get_pos()[1] in range(self.abs_height+(super(Menu,self).lines_count+line) * self.text_size, self.abs_height+(super(Menu,self).lines_count+line) * self.text_size + self.text_size + 1)):
+                self.menu_click.play()
+                self.current = line
+                return True
+        return False
+                
+    
+    def event_mousebuttondown(self, event):
+        if self.event_mousemotion(event) == True: self.str_func[self.current][1]()
             
 
 class MainMenu(Menu):
