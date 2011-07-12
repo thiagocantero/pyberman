@@ -48,6 +48,7 @@ class Game(events.AutoListeningObject):
         self.players_score=[0]*10
         self.players=[None]*10
         self.player_names=['Player %s'%num for num in range(10)]
+        self.players_colors=[(148,0,211),(255,255,0),(255,0,0),(0,255,0),(0,250,154),(0,0,238),(255,20,147),(255,140,0)]
         self.ground = pygame.image.load('Data\\ground.jpg')
         #: Whether the main loop should run
         self.done = False

@@ -251,11 +251,7 @@ class Bomb(GameObject):
 
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-<<<<<<< local
         self.time=80#1//self.game.delta
-=======
-        self.time=80#400//self.game.config['general']['framerate']
->>>>>>> other
         self.player_first_stands = True
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
 
@@ -458,7 +454,7 @@ class Player(GameObject):
         if self.dest != None:
             d=min(self.time_moving,self.game.delta)
             self.time_moving-=d
-            self.move(self.cur_dest[0]*d,self.cur_dest[1]*d)    
+            self.move(self.cur_dest[0]*d*self.speed,self.cur_dest[1]*d*self.speed)    
             self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line])
             self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
         else:
