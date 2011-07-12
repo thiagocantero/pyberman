@@ -68,7 +68,7 @@ class GameServer(Server):
             return 
         channel.player_id = self._max_player_id
         self._max_player_id+=1
-        print "connected client %d from %s"%(channel.player_id, addr)
+        print ("connected client %d from %s"%(channel.player_id, addr))
 
     def send_to_all(self, data):
         for channel in self.channels:
