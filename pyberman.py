@@ -2,10 +2,9 @@
 #Copyright (C) 2011 PyTeam
 
 '''The Pyberman runner.
-version 0.1 alpha
-It really works!
 '''
 
+import os
 import sys
 import random
 import pygame
@@ -31,8 +30,12 @@ class Game(events.AutoListeningObject):
         '''Initializes the game.'''
         pygame.init()
         pygame.mixer.init()
-        self.menu_sound = pygame.mixer.Sound('Data\\Pandemonium.ogg')
-        self.explosions = [pygame.mixer.Sound('Data\\explosion.ogg'),pygame.mixer.Sound('Data\\explosion2.ogg'),pygame.mixer.Sound('Data\\explosion3.ogg')]
+        self.menu_sound = pygame.mixer.Sound(os.path.join('Data', 'Pandemonium.ogg'))
+        self.explosions = [
+            pygame.mixer.Sound(os.path.join('Data', 'explosion.ogg')),
+            pygame.mixer.Sound(os.path.join('Data', 'explosion2.ogg')),
+            pygame.mixer.Sound(os.path.join('Data', 'explosion3.ogg'))
+        ]
         pygame.display.set_caption('Pyberman')
         #self.surface = pygame.display.set_mode((self.config['screen']['width'], self.config['screen']['height']), FULLSCREEN|DOUBLEBUF     |HWSURFACE)
         # use default resolution
