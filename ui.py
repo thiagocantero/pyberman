@@ -184,6 +184,18 @@ class Score(Menu):
                 self.strings.append('%s        %s'%(self.game.player_names[player.id], self.game.players_score[player.id]))
         super(Score, self).__init__(self.game, self.items, 'Score', self.strings) 
 
+    def update(self):
+        self.image.blit(self.background,(0,0))
+        self.image.blit(self.rendered_title,((self.width-self.rendered_title.get_width())//2,self.text_size))
+        
+        for number,text in enumerate(self.strings):
+            self.image.blit(self.text_font.render(text, True, self.game.players_colors[number]),(self.width//2,self.abs_height+number*self.text_size))
+        
+        for number,(text,func) in enumerate(self.str_func):
+            if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
+            else: self.image.blit(self.text_font.render(text, True, (0,154,205)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
+    
+    
     def start_local_game(self):
         self.kill()
         ChooseLevelMenu(self.game, 2)
