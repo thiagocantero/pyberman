@@ -176,40 +176,65 @@ class IncreaseRadiusBonus(Bonus):
 class BadBonus(Bonus):
     '''Class representing bad bonus, that have their period of impact over the player'''
     image_files=[os.path.join('bon_bad','1.png'),os.path.join('bon_bad','2.png'), os.path.join('bon_bad','3.png'), os.path.join('bon_bad','4.png')]
+    
+    def __init__(self, game, x, y, groups=None):
+        self.speed_temp = 0
+        self.radius_temp = 0
+        super(BadBonus, self).__init__(game, x, y, groups)
+        self.time = 200
+        self.affect = False
+     
     def affect_player(self, player):
         # here timer is
         pass
+    
+    def update(self):
+        if self.affect == True:
+            self.time -= 1
+            if self.time == 0: self.back()
+        super(BadBonus, self).update()
 
 
 class SpeedDownBonus(BadBonus):
     '''Class representing bad bonus, decreasing speed to minimum for a while'''
     def affect_player(self, player):
-        speed_temp = player.speed
+        self.player = player
+        self.speed_temp = player.speed
         player.speed = 0.05
-        #timer needed
-        player.speed = speed_temp
+        self.affect = True
+        #player.speed = speed_temp
+        
+    def back(self):
+        self.player.speed = self.speed_temp
 
 
 class ReduceRadiusBonus(BadBonus):
     '''Class representing bad bonus, reducing radius to minimum for a while'''
 
     def affect_player(self, player):
-        radius_temp = player.radius
+        self.player = player
+        self.radius_temp = player.radius
         player.radius = 1
-        self.time = 150
+        self.affect = True
+        #self.time = 150
         #not done yet
-        player.radius = radius_temp
+        #player.radius = radius_temp
+        
+    def back(self):
+        self.player.radius = self.radius_temp
 
-    def update(self):
-        self.time-=1
-        if self.time==0:
-            kill(self)
-        super(Bomb, self).update()
+    #def update(self):
+     #   self.time-=1
+      #  if self.time==0:
+       #     kill(self)
+        #super(Bomb, self).update()
+        
 
-
-class ExchangePlacesBonus(BadBonus):
+class ExchangePlacesBonus(Bonus):
     '''Class representing bad bonus, when player changes place with random other player'''
 
+    image_files=[os.path.join('bon_bad','1.png'),os.path.join('bon_bad','2.png'), os.path.join('bon_bad','3.png'), os.path.join('bon_bad','4.png')]
+    
     def affect_player(self, player):
         tempx, tempy = player.x, player.y
         rand_player = random.choice(self.game.players[:self.game.players_alive ])
@@ -226,7 +251,7 @@ class Bomb(GameObject):
 
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time=1000#400//self.game.config['general']['framerate']
+        self.time=80#400//self.game.config['general']['framerate']
         self.player_first_stands = True
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
 
@@ -340,7 +365,7 @@ class Box(Wall):
         '''When colliding fire, the wall may generate bonus''' 
         x=random.choice([True,False])
         #Only good bonuses by now
-        w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus])
+        w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus, ReduceRadiusBonus, SpeedDownBonus,IncreaseRadiusBonus,SpeedUpBonus,AddBombBonus])
         if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
         return False
     
