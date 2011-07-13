@@ -368,9 +368,9 @@ class Player(GameObject, ConnectionListener):
         self.id = id
         self.cur_pic = self.cur_line = 0
         self.bombs, self.speed, self.radius, self.kills, self.time_moving = 1, 2.0, 1, 0, 0
-        self.dest,self.cur_dest = None, None
+        self.dest = self.cur_dest = None
         self.can_move_bombs=False
-        self.temp_speed,self.temp_radius=None, None
+        self.temp_speed = self.temp_radius = None
         self.bad_speed, self.bad_radius=None, None
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         if Player.player_images == None: self.create_images()
@@ -378,7 +378,7 @@ class Player(GameObject, ConnectionListener):
 
     def collide_Player(self, player):
         return True #Player can move further
-    
+
     def collide_Fire(self, fire):
         self.game.players_alive-=1
         if self is fire.player: 
@@ -402,30 +402,38 @@ class Player(GameObject, ConnectionListener):
     def go_up(self):
         self.dest = (0, -1)
         self.cur_line = 3
+        if self.game.is_network_game:
+            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
 
     def go_down(self):
         self.dest = (0, 1)
         self.cur_line = 0
+        if self.game.is_network_game:
+            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
 
     def go_left(self):
         self.dest = (-1, 0)
         self.cur_line = 1
+        if self.game.is_network_game:
+            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
 
     def go_right(self):
         self.dest = (1, 0)
         self.cur_line = 2
+        if self.game.is_network_game:
+            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
 
     def step(self):
         if self.dest!=None:
             if self.time_moving==0:
                 self.time_moving = self.game.step_length/self.speed
-                if self.game.is_network_game:
-                    self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
                 self.cur_dest=[self.dest[0]*self.speed,self.dest[1]*self.speed]
 
     def stop(self):
         self.dest=None
-        
+        if self.game.is_network_game:
+            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
+
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if not pygame.sprite.spritecollide(self,self.game.bombs,False):
