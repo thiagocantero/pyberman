@@ -44,8 +44,6 @@ class Game(events.AutoListeningObject):
         self.screen_width = pygame.display.Info().current_w
         self.step_length=0.25
         self.controller = None
-        self.c1 = None
-        self.c2 = None
         self.create_groups()
         self.players_score=[0]*10
         self.players=[None]*10
@@ -126,9 +124,7 @@ class Game(events.AutoListeningObject):
                 y=random.choice(self.available)
                 self.available.remove(y)
                 self.players[x]=Player(self, y[0], y[1], x, groups=(self.all, self.dynamic, self.destroyable, self.gamers))
-        self.controller = controllers.LocalController(self, self.players[0], self.players[1])
-        self.c1=self.controller.player_controller_1
-        self.c2=self.controller.player_controller_2
+        self.controller = controllers.LocalController(self.players[0],self.players[1])
         
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
@@ -160,8 +156,6 @@ class Game(events.AutoListeningObject):
 
     def update(self):
         '''Updates all the objects on the level'''
-        if self.c1 is not None: self.c1.update()
-        if self.c2 is not None: self.c2.update()
         self.all.update()
         if self.is_network_game:
             self.connection.pump()
