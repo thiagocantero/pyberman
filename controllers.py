@@ -3,6 +3,7 @@
 
 """Player controllers which dispatch physical events to players."""
 
+import time
 import pygame
 from pygame.locals import *
 from PodSixNet.Channel import Channel
@@ -45,6 +46,33 @@ class LocalController(events.AutoListeningObject):
             self.player2.stop()
 
 
+
+class NetworkController(events.AutoListeningObject):
+    '''Class which catches the events from the keyboard and resents these events to players of network game'''
+
+    def __init__(self, player):
+        self.player = player
+        self.actions={
+            K_UP:self.player.go_up,
+            K_DOWN:self.player.go_down,
+            K_LEFT:self.player.go_left,
+            K_RIGHT: self.player.go_right,
+            K_SPACE: self.player.put_bomb,
+        }
+        super(NetworkController, self).__init__()
+
+    def event_keydown(self, event):
+        '''Manages to use the key down until it is released'''
+        func = self.actions.get(event.key, None)
+        if func is not None:
+            func()
+
+    def event_keyup(self, event):
+        '''Release of currect key'''
+        if event.key in [K_UP,K_DOWN,K_LEFT,K_RIGHT]: 
+            self.player1.stop()
+
+
 class ClientChannel(Channel):
     def Network(data):
         self._server.SendToAll(data)
@@ -55,7 +83,8 @@ class ClientChannel(Channel):
 class GameServer(Server):
     channelClass = ClientChannel
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, game, *args, **kwargs):
+        self.game = game
         Server.__init__(self, *args, **kwargs)
         self.game_started = False
         self._max_player_id = 0
@@ -66,7 +95,7 @@ class GameServer(Server):
             return 
         channel.player_id = self._max_player_id
         self._max_player_id+=1
-        print ("connected client %d from %s"%(channel.player_id, addr))
+        self.game.active_players.append("%d: from %s"%(channel.player_id+1, addr))
 
     def send_to_all(self, data):
         for channel in self.channels:
@@ -74,28 +103,6 @@ class GameServer(Server):
 
     def start_game(self, level):
         for player in self.channels:
-            player.sent({'action': 'load_level', 'data': level, 'player_id': player.player_id})
+            player.sent({'action': 'start_game', 'level': level, 'player_id': player.player_id, 'num_players': self._max_player_id, 'random_seed': int(time.time())})
         self.game_started = True
 
-
-class NetworkController(events.AutoListeningObject, ConnectionListener):
-
-    def __init__(self, game, local_player_id):
-        self.game = game
-        self.local_player_id = local_player_id
-        super(NetworkController, self).__init__()
-        self.actions={
-            K_UP: 'go_up',
-            K_DOWN: 'go_down',
-            K_LEFT: 'go_left',
-            K_RIGHT: 'go_right',
-            K_SPACE: 'put_bomb',
-        }
-
-    def Network_player(self, data):
-        getattr(self.game.players[data['player_id']], data['func'])()
-
-    def event_keydown(self, event):
-        func = self.actions.get(event.key, None)
-        if func is not None:
-            self.send({'action': 'player', 'func': func, 'player_id': self.local_player_id})
