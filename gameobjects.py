@@ -54,13 +54,19 @@ class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
 
     def load_image(self, file_name):
         """Manages caching and transformation of image."""
-        cache = getattr(self.__class__, '_image_cache', {})
+        cache = getattr(GameObject, '_image_cache', {})
         image = cache.get(file_name, None)
         if image is None:
             image = pygame.transform.smoothscale(pygame.image.load(os.path.join(IMAGE_DIR, file_name)), (self.width, self.height))
             cache[file_name] = image
-            setattr(self.__class__, '_image_cache', cache)
+            setattr(GameObject, '_image_cache', cache)
         return image
+
+    @classmethod
+    def invalidate_cache(cls):
+        cache = getattr(cls, '_image_cache')
+        if cache is not None:
+            cache.clear()
 
     @property
     def screen_x(self):
