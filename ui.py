@@ -1,9 +1,9 @@
-import sys
-import os
-import pygame
-from pygame.locals import *
 import glob
 import os
+import sys
+import pygame
+from pygame.locals import *
+from PodSixNet.Connection import connection, ConnectionListener
 from gameobjects import GameObject 
 import events
 
@@ -39,7 +39,7 @@ class TextBox(GameObject):
     def update(self):
         pass
 
-        
+
 class Menu(TextBox):
     '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
         It's a class which is responsible for creating GameObject called Menu, which will
@@ -148,7 +148,7 @@ class ChooseLevelMenu(Menu):
     def back(self):
         self.kill()
         MainMenu(self.game)
-        
+
     def load_level(self):
         self.kill()
         self.game.start_local_game(self.file_names[self.current])
@@ -324,7 +324,7 @@ class NetworkMenu(Menu):
     def start_game(self):
         if self.game.server._max_player_id:
             self.kill()
-            ChooseLevelMenu(self.game, self.game.server._max_player_id)
+            ChooseLevelNetworkMenu(self.game, self.game.server._max_player_id)
 
     def back(self):
         self.kill()
@@ -347,6 +347,8 @@ class EnterIPBox(EditBox):
         self.kill()
         self.game.is_network_game = True
         self.game.Connect((self.inp, self.game.config['server']['port']))
+        self.game._waitbox = WaitBox(self.game)
+
 
 class ErrorMenu(Menu):
     def __init__(self, game, error):
@@ -356,4 +358,28 @@ class ErrorMenu(Menu):
         super(ErrorMenu, self).__init__(game, self.items, 'Error', ['An error occured:', error])
     def back(self):
         self.kill()
+        MainMenu(self.game)
+
+
+class ChooseLevelNetworkMenu(ChooseLevelMenu):
+    def back(self):
+        self.kill()
+        NetworkMenu(self.game)
+
+    def load_level(self):
+        self.kill()
+        self.game.server.start_game(open(self.file_names[self.current]).read())
+
+
+class WaitBox(Menu):
+    def __init__(self, game):
+        self.items = (
+            ('Back', self.back),
+        )
+        super(WaitBox, self).__init__(game, self.items, 'Waiting...', ['Wait until the game starts'])
+
+    def back(self):
+        self.kill()
+        connection.Close()
+        self.game.is_network_game = False
         MainMenu(self.game)

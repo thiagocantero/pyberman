@@ -147,6 +147,8 @@ class Game(events.AutoListeningObject, ConnectionListener):
         self.bonuses = pygame.sprite.Group()
 
     def Network_start_game(self, data):
+    	self._waitbox.kill()
+    	del self._waitbox
         self.is_network_game = True
         random.seed(data['random_seed'])
         self.player_id = data['player_id']
@@ -166,6 +168,7 @@ class Game(events.AutoListeningObject, ConnectionListener):
         self.all.update()
         if self.is_network_game:
             connection.Pump()
+            self.Pump()
             if self.is_server:
                 self.server.Pump()
 

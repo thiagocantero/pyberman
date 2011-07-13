@@ -99,10 +99,9 @@ class GameServer(Server):
 
     def send_to_all(self, data):
         for channel in self.channels:
-            channel.send(data)
+            channel.Send(data)
 
     def start_game(self, level):
         for player in self.channels:
-            player.sent({'action': 'start_game', 'level': level, 'player_id': player.player_id, 'num_players': self._max_player_id, 'random_seed': int(time.time())})
+            player.Send({'action': 'start_game', 'level': level, 'player_id': player.player_id, 'num_players': self._max_player_id, 'random_seed': int(time.time())})
         self.game_started = True
-
