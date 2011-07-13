@@ -178,57 +178,28 @@ class BadBonus(Bonus):
     image_files=[os.path.join('bon_bad','1.png'),os.path.join('bon_bad','2.png'), os.path.join('bon_bad','3.png'), os.path.join('bon_bad','4.png')]
     
     def __init__(self, game, x, y, groups=None):
-        self.speed_temp = 0
-        self.radius_temp = 0
         super(BadBonus, self).__init__(game, x, y, groups)
-        self.time = 200
-        self.affect = False
+        self.time = 15
      
     def affect_player(self, player):
-        # here timer is
         pass
     
-    def update(self):
-        if self.affect == True:
-            self.time -= 1
-            if self.time == 0: self.back()
-        super(BadBonus, self).update()
-
-
 class SpeedDownBonus(BadBonus):
     '''Class representing bad bonus, decreasing speed to minimum for a while'''
     def affect_player(self, player):
-        self.player = player
-        self.speed_temp = player.speed
+        player.temp_speed = player.speed
+        player.bad_speed=15
         player.speed = 1
-        self.affect = True
-        #player.speed = speed_temp
-        
-    def back(self):
-        self.player.speed = self.speed_temp
 
 
 class ReduceRadiusBonus(BadBonus):
     '''Class representing bad bonus, reducing radius to minimum for a while'''
 
     def affect_player(self, player):
-        self.player = player
-        self.radius_temp = player.radius
+        player.temp_radius = player.radius
+        player.bad_radius=15
         player.radius = 1
-        self.affect = True
-        #self.time = 150
-        #not done yet
-        #player.radius = radius_temp
-        
-    def back(self):
-        self.player.radius = self.radius_temp
 
-    #def update(self):
-     #   self.time-=1
-      #  if self.time==0:
-       #     kill(self)
-        #super(Bomb, self).update()
-        
 
 class ExchangePlacesBonus(Bonus):
     '''Class representing bad bonus, when player changes place with random other player'''
@@ -243,7 +214,9 @@ class ExchangePlacesBonus(Bonus):
         player.y = rand_player.y
         rand_player.x = tempx
         rand_player.y = tempy
+        player.move_up_to()
         player.update_rect()
+        rand_player.move_up_to()
         rand_player.update_rect()
 
 class Bomb(GameObject):
@@ -252,7 +225,7 @@ class Bomb(GameObject):
 
     def __init__(self, player, game, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time=80#1//self.game.delta
+        self.time=7
         self.player_first_stands = True
         self.dest=None
         super(Bomb, self).__init__(game, x,y, *args, **kwargs)
@@ -262,8 +235,13 @@ class Bomb(GameObject):
             return True
         else:
             if player.can_move_bombs:
-                self.dest=player.cur_dest[:]
-            return False
+                if player.cur_dest!=None:
+                    self.dest=player.cur_dest[:]
+                else: self.dest=None
+                return True
+            else:
+                self.dest=None
+                return False
 
     def stop_colliding(self, obj):
         if isinstance(obj, Player):
@@ -315,26 +293,26 @@ class Bomb(GameObject):
     def update(self):
         if self.dest != None:
             self.move(self.dest[0]*self.game.delta,self.dest[1]*self.game.delta)    
-        self.time-=1
-        if self.time < 12:  
-            if self.time==0:
+        self.time-=self.game.delta
+        if self.time < 1.2:  
+            if self.time<0.1:
                 self.explode()
-            else: self.image = self.load_image(os.path.join('bomb','%s.png'%str(self.time)))
+            else: self.image = self.load_image(os.path.join('bomb','%s.png'%str(int(self.time*10))))
         super(Bomb, self).update()
 
 
 class Fire(GameObject):
+    image_files = ['fire.jpg']
+
     '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
-        self.time = 150//self.game.config['general']['framerate']
+        self.time = 1
         super(Fire, self).__init__(game, x,y, *args, **kwargs)
-        self.image = self.load_image('fire.jpg')
-        super(Fire, self).update()
-
+        
     def update(self):
-        '''As fire exists 3 reloads, it's durance decreases'''
-        self.time-=1
+        '''As fire exists 1 second, it's durance decreases'''
+        self.time-=self.game.delta
         if self.time<0:
             self.kill()
 
@@ -390,15 +368,17 @@ class Player(GameObject):
         self.cur_pic = self.cur_line = 0
         if Player.player_images == None: self.create_images()
         self.bombs, self.speed, self.radius, self.kills, self.time_moving = 1, 2.0, 1, 0, 0
-        self.dest = None
-        self.cur_dest=None
+        self.dest,self.cur_dest = None, None
         self.can_move_bombs=False
+        self.temp_speed,self.temp_radius=None, None
+        self.bad_speed, self.bad_radius=None, None
+        
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         self.image = Player.player_images[id][0][0]
 
     def collide_Player(self, player):
         return True #Player can move further
-
+    
     def collide_Fire(self, fire):
         self.game.players_alive-=1
         if self is fire.player: 
@@ -446,9 +426,10 @@ class Player(GameObject):
         
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
-        if self.bombs>0:
-            self.bombs-=1
-            Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
+        if not pygame.sprite.spritecollide(self,self.game.bombs,False):
+            if self.bombs>0:
+                self.bombs-=1
+                Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
 
     def move_forward(self, dest):
         '''Moves player to his destination'''
@@ -457,6 +438,16 @@ class Player(GameObject):
     def update(self):
         self.step()
         '''Moves player to his destination and checks whether he accepted any bonuses'''
+        if self.temp_speed is not None:
+            self.bad_speed-=self.game.delta
+            if self.bad_speed<0:
+                self.speed=self.temp_speed
+                self.temp_speed=None
+        if self.temp_radius is not None:
+            self.bad_radius-=self.game.delta
+            if self.bad_radius<0:
+                self.radius=self.temp_radius
+                self.temp_radius=None
         if self.dest != None:
             d=min(self.time_moving,self.game.delta)
             self.time_moving-=d

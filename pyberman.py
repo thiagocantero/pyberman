@@ -47,6 +47,7 @@ class Game(events.AutoListeningObject):
         self.create_groups()
         self.players_score=[0]*10
         self.players=[None]*10
+        self.active=['192.168.0.1']
         self.player_names=['Player %s'%num for num in range(10)]
         self.players_colors=[(148,0,211),(255,255,0),(255,0,0),(0,255,0),(0,250,154),(0,0,238),(255,20,147),(255,140,0)]
         self.ground = pygame.image.load('Data\\ground.jpg')
@@ -64,7 +65,7 @@ class Game(events.AutoListeningObject):
         #to control a framerate
         clock = pygame.time.Clock()
         MainMenu(self)
-        self.menu_sound.play()
+        self.menu_sound.play(loops=100)
         while not self.done:
             for event in pygame.event.get():
                 events.Event.process_event(events.event_from_pygame_event(self, event)) 

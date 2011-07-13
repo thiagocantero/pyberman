@@ -88,12 +88,13 @@ class Menu(TextBox):
                 
     
     def event_mousebuttondown(self, event):
-        if self.event_mousemotion(event) == True: self.str_func[self.current][1]()
-            
+        if self.event_mousemotion(event) == True: 
+            self.str_func[self.current][1]()
 
 class MainMenu(Menu):
     '''This menu is shown on a game startup'''
     def __init__(self, game):
+        self.game=game
         self.items=(
             ('Start Local Game', self.start_local_game), 
             ('Start Network Game', self.start_network_game), 
@@ -102,6 +103,7 @@ class MainMenu(Menu):
             ('Credits', self.credits), 
             ('Quit', self.quit)
         )
+        game.players_score=[0]*10
         super(MainMenu, self).__init__(game, self.items, 'Main Menu') 
 
     def start_local_game(self):
@@ -110,7 +112,8 @@ class MainMenu(Menu):
     
     def start_network_game(self):
         self.kill()
-        self.game.start_server()
+        NetworkMenu(self.game)
+        #self.game.start_server()
     
     def settings(self):
         self.kill()
@@ -166,6 +169,7 @@ class SettingsMenu(Menu):
         self.items=(
             ('Player1', self.set_name0),
             ('Player2', self.set_name1),
+            ('Music Settings',self.muz),
             ('Back', self.back),
         )
         super(SettingsMenu, self).__init__(game, self.items, 'Settings') 
@@ -173,6 +177,10 @@ class SettingsMenu(Menu):
     def back(self):
         self.kill()
         MainMenu(self.game)
+    
+    def muz(self):
+        self.kill()
+        MusicMenu(self.game)
         
     def set_name0(self):
         self.kill()
@@ -182,13 +190,39 @@ class SettingsMenu(Menu):
         self.kill()
         ChoosePlayerName(self.game,1)
         
+        
+        
+class MusicMenu(Menu):
+    '''This menu is a settings menu'''
+    def __init__(self, game):
+        self.game=game
+        self.vol=1.0
+        self.items=(
+            ('Volume+', self.vol_plus),
+            ('Volume-', self.vol_minus),
+            ('Back', self.back),
+        )
+        super(MusicMenu, self).__init__(game, self.items, 'Music Settings') 
+
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
+    
+    def vol_plus(self):
+        if self.vol<1: self.vol+=0.1 
+        self.game.menu_sound.set_volume(self.vol)
+        
+    def vol_minus(self):
+        if self.vol>0: self.vol-=0.1
+        self.game.menu_sound.set_volume(self.vol)
+        
 class Score(Menu):
     '''Shows score after the game''' 
     def __init__(self, game):
         self.game=game
         self.items=(
-            ('Next Level', self.start_local_game), 
-            ('Quit', self.quit)
+            ('Continue', self.start_local_game), 
+            ('MainMenu', self.quit)
         )
         self.strings=[]
         for player in self.game.players:
@@ -213,7 +247,8 @@ class Score(Menu):
         ChooseLevelMenu(self.game, 2)
 
     def quit(self):
-        events.Event.process_event(events.QuitEvent(self))
+        self.kill()
+        MainMenu(self.game)
         
 
 class EditBox(TextBox):
@@ -274,3 +309,23 @@ class ChoosePlayerName(EditBox):
         self.game.player_names[self.id]=self.inp
         self.kill()
         SettingsMenu(self.game)
+
+class NetworkMenu(Menu):
+    def __init__(self, game):
+        self.items=(
+            ('Start Game', self.start_game), 
+            ('Back', self.back)
+        )
+        self.game=game
+        super(NetworkMenu, self).__init__(game, self.items, 'Waiting for players...',self.game.active)
+
+    def start_game(self):
+        if self.game.active:
+            self.kill()
+            ChooseLevelMenu(self.game, len(self.game.active)+1)
+    
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
+
+    
