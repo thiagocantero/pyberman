@@ -45,12 +45,12 @@ class Menu(TextBox):
         It's a class which is responsible for creating GameObject called Menu, which will
         be showed on the screen in the main loop
     '''
-    def __init__(self, game, str_func, title, strings=[]):
+    def __init__(self, game, str_func, title, strings=None):
         '''@param str_func: list of tuples(str,func), where str is displayed name, func is callable function   @type str_func:list
            @param title: title of the current menu                                                             @type title:str     '''
         self.str_func=str_func
         self.menu_length=len(str_func)
-        super(Menu, self).__init__(game, title, strings)
+        super(Menu, self).__init__(game, title, strings if strings is not None else [])
         self.current=0
         self.menu_click = pygame.mixer.Sound(os.path.join('Data', 'click.ogg'))
 
@@ -98,7 +98,7 @@ class MainMenu(Menu):
         self.items=(
             ('Start Local Game', self.start_local_game), 
             ('Start Network Game', self.start_network_game), 
-            ('Join Network Game', None),
+            ('Join Network Game', self.join_network_game),
             ('Settings', self.settings),
             ('Credits', self.credits), 
             ('Quit', self.quit)
@@ -109,12 +109,16 @@ class MainMenu(Menu):
     def start_local_game(self):
         self.kill()
         ChooseLevelMenu(self.game, 2)
-    
+
     def start_network_game(self):
         self.kill()
+        self.game.start_server()
         NetworkMenu(self.game)
-        #self.game.start_server()
-    
+
+    def join_network_game(self):
+        self.kill()
+        EnterIPBox(self.game)
+
     def settings(self):
         self.kill()
         SettingsMenu(self.game)
@@ -147,7 +151,7 @@ class ChooseLevelMenu(Menu):
         
     def load_level(self):
         self.kill()
-        self.game.load_level(self.file_names[self.current], self.players)
+        self.game.start_local_game(self.file_names[self.current])
 
 
 class CreditsMenu(Menu):
@@ -256,14 +260,13 @@ class EditBox(TextBox):
         It's a class which is responsible for creating GameObject called Menu, which will
         be showed on the screen in the main loop
     '''
-    def __init__(self, game, inp , title, func, strings=[]):
+    def __init__(self, game, inp , title, strings=None):
         '''@param inp: inp is parametr which we want to change    @type inp:str
            @param title: title of the current editbox             @type title:str     '''
         self.inp = inp
-        self.func = func
         super(EditBox, self).__init__(game, title, strings)
         self.cur_pos=len(inp)
-        
+
     @property
     def lines_count(self):
         return super(EditBox,self).lines_count+1
@@ -301,11 +304,10 @@ class EditBox(TextBox):
 class ChoosePlayerName(EditBox):
     '''This menu is shown on a game startup'''
     def __init__(self, game, id):
-        self.game = game
         self.id=id
-        super(ChoosePlayerName, self).__init__(game, self.game.player_names[id], 'Player Naming', self.back, ['Choose the name of the player'])
-        
-    def back(self):
+        super(ChoosePlayerName, self).__init__(game, self.game.player_names[id], 'Player Naming', ['Choose the name of the player'])
+
+    def func(self):
         self.game.player_names[self.id]=self.inp
         self.kill()
         SettingsMenu(self.game)
@@ -317,15 +319,41 @@ class NetworkMenu(Menu):
             ('Back', self.back)
         )
         self.game=game
-        super(NetworkMenu, self).__init__(game, self.items, 'Waiting for players...',self.game.active)
+        super(NetworkMenu, self).__init__(game, self.items, 'Waiting for players...', self.game.active_players)
 
     def start_game(self):
-        if self.game.active:
+        if self.game.server._max_player_id:
             self.kill()
-            ChooseLevelMenu(self.game, len(self.game.active)+1)
-    
+            ChooseLevelMenu(self.game, self.game.server._max_player_id)
+
     def back(self):
         self.kill()
         MainMenu(self.game)
 
-    
+class EnterIPBox(EditBox):
+    def __init__(self, game):
+        super(EnterIPBox, self).__init__(game, '192.168.1.1', 'Server IP', ['Enter server IP:'])
+
+    def func(self):
+        parts = self.inp.split('.')
+        try:
+            parts = map(int, parts)
+        except ValueError:
+            self.inp = 'Incorrect value!'
+            return
+        if not len(parts)==4 or not all(i<255 for i in parts):
+            self.inp = 'Incorrect value!'
+            return
+        self.kill()
+        self.game.is_network_game = True
+        self.game.Connect((self.inp, self.game.config['server']['port']))
+
+class ErrorMenu(Menu):
+    def __init__(self, game, error):
+        self.items = (
+            ('Back', self.back),
+        )
+        super(ErrorMenu, self).__init__(game, self.items, 'Error', ['An error occured:', error])
+    def back(self):
+        self.kill()
+        MainMenu(self.game)
