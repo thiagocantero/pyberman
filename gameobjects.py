@@ -5,9 +5,10 @@
 
 import os
 from weakref import WeakSet 
-import pygame
-import events
 import random
+import pygame
+from PodSixNet.Connection import connection, ConnectionListener
+import events
 
 IMAGE_DIR = "Data"
 
@@ -359,7 +360,7 @@ class Box(Wall):
         return False
 
 
-class Player(GameObject):
+class Player(GameObject, ConnectionListener):
     '''Represents a player in the game.'''
     player_images = None
 
@@ -428,8 +429,15 @@ class Player(GameObject):
         '''Current player puts the bomb if he has the one'''
         if not pygame.sprite.spritecollide(self,self.game.bombs,False):
             if self.bombs>0:
+                if self.game.is_network_game:
+                    connection.send({'action': 'put_bomb', 'player_id': self.player_id})
                 self.bombs-=1
                 Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
+
+    def Network_put_bomb(self, data):
+        if not data['player_id']==self.player_id:
+            return
+        self.put_bomb()
 
     def move_forward(self, dest):
         '''Moves player to his destination'''
@@ -461,3 +469,8 @@ class Player(GameObject):
         '''Function for truncating the player added for easier getting to the position'''
         self.x=round(self.x)
         self.y=round(self.y)
+
+    def kill(self):
+        if self.game.players_alive<2:
+            self.game.end_game()
+        super(Player, self).kill()
