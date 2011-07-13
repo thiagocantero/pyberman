@@ -214,7 +214,7 @@ class ExchangePlacesBonus(Bonus):
         player.y = rand_player.y
         rand_player.x = tempx
         rand_player.y = tempy
-        player.move_up_to()
+        #player.move_up_to()
         player.update_rect()
         rand_player.move_up_to()
         rand_player.update_rect()
@@ -436,7 +436,6 @@ class Player(GameObject):
         self.dest = dest
 
     def update(self):
-        self.step()
         '''Moves player to his destination and checks whether he accepted any bonuses'''
         if self.temp_speed is not None:
             self.bad_speed-=self.game.delta
