@@ -12,7 +12,7 @@ import pygame
 from pygame.locals import *
 from PodSixNet.Connection import connection, ConnectionListener
 from gameobjects import *
-from ui import MainMenu, Score
+from ui import MainMenu, Score, ErrorMenu
 import events
 import controllers
 
@@ -147,8 +147,9 @@ class Game(events.AutoListeningObject, ConnectionListener):
         self.bonuses = pygame.sprite.Group()
 
     def Network_start_game(self, data):
-    	self._waitbox.kill()
-    	del self._waitbox
+        if not self.is_server:
+            self._waitbox.kill()
+            del self._waitbox
         self.is_network_game = True
         random.seed(data['random_seed'])
         self.player_id = data['player_id']
@@ -180,11 +181,12 @@ class Game(events.AutoListeningObject, ConnectionListener):
         self.Connect(('localhost', self.config['server']['port']))
 
     def Network_error(self, data):
-        ErrorMenu(self, data['error'][1])
+        ErrorMenu(self, 'Network error occured.')
+        print data
         connection.Close()
 
     def Network_disconnected(self, data):
-        ErrorMenu(self, data)
+        ErrorMenu(self, 'Disconnected from server.')
 
     @classmethod
     def instance(cls):
