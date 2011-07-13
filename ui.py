@@ -322,7 +322,7 @@ class NetworkMenu(Menu):
         super(NetworkMenu, self).__init__(game, self.items, 'Waiting for players...', self.game.active_players)
 
     def start_game(self):
-        if self.game.server._max_player_id:
+        if self.game.server._max_player_id>1:
             self.kill()
             ChooseLevelNetworkMenu(self.game, self.game.server._max_player_id)
 

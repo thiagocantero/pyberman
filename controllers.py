@@ -70,15 +70,12 @@ class NetworkController(events.AutoListeningObject):
     def event_keyup(self, event):
         '''Release of currect key'''
         if event.key in [K_UP,K_DOWN,K_LEFT,K_RIGHT]: 
-            self.player1.stop()
+            self.player.stop()
 
 
 class ClientChannel(Channel):
-    def Network(data):
-        self._server.SendToAll(data)
-
-    def Close(self):
-        self._server.send_to_all({'action': 'kill', 'player': self.player_id})
+    def Network(self, data):
+        self._server.send_to_all(data)
 
 class GameServer(Server):
     channelClass = ClientChannel

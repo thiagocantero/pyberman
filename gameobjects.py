@@ -431,7 +431,7 @@ class Player(GameObject, ConnectionListener):
         if not pygame.sprite.spritecollide(self,self.game.bombs,False):
             if self.bombs>0:
                 if self.game.is_network_game:
-                    connection.send({'action': 'put_bomb', 'player_id': self.id})
+                    connection.Send({'action': 'put_bomb', 'player_id': self.id})
                 self.bombs-=1
                 Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
 
@@ -447,8 +447,9 @@ class Player(GameObject, ConnectionListener):
         self.cur_line = data['cur_line']
 
     def update(self):
-        self.step()
         '''Moves player to his destination and checks whether he accepted any bonuses'''
+        self.Pump()
+        self.step()
         if self.temp_speed is not None:
             self.bad_speed-=self.game.delta
             if self.bad_speed<0:
