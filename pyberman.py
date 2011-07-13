@@ -86,6 +86,7 @@ class Game(events.AutoListeningObject, ConnectionListener):
 
     def load_level(self, f):
         '''Loads the chosen map for a needed amount of players'''
+        GameObject.invalidate_cache()
         self.available=[]
         self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
         self.side=min((self.screen_height//self.height,self.screen_width//self.width))
