@@ -6,17 +6,18 @@
 
 import os
 import sys
+from cStringIO import StringIO
 import random
 import pygame
 from pygame.locals import *
+from PodSixNet.Connection import connection, ConnectionListener
 from gameobjects import *
-from ui import MainMenu
-from ui import Score
+from ui import MainMenu, Score
 import events
 import controllers
 
 
-class Game(events.AutoListeningObject):
+class Game(events.AutoListeningObject, ConnectionListener):
     '''Represents a high-level game instance.
     Should be a singleton.
     '''
@@ -45,12 +46,8 @@ class Game(events.AutoListeningObject):
         self.step_length=0.25
         self.controller = None
         self.create_groups()
-        self.players_score=[0]*10
-        self.players=[None]*10
-        self.active=['192.168.0.1']
         self.player_names=['Player %s'%num for num in range(10)]
         self.players_colors=[(148,0,211),(255,255,0),(255,0,0),(0,255,0),(0,250,154),(0,0,238),(255,20,147),(255,140,0)]
-        self.ground = pygame.image.load('Data\\ground.jpg')
         #: Whether the main loop should run
         self.done = False
         self.is_network_game = self.is_server = False
@@ -73,13 +70,9 @@ class Game(events.AutoListeningObject):
             self.update()
             self.redraw()  
             pygame.display.flip()
-            if self.players_alive<2:
-                for x in self.all: x.kill()
-                self.create_groups()
-                Score(self)
             #Let other processes to work a bit, limiting the framerate
             clock.tick(self.config['general']['framerate'])
-        
+
     def event_keydown(self, event):
         if event.key==K_ESCAPE:
             event.stop_propagating = True
@@ -90,42 +83,51 @@ class Game(events.AutoListeningObject):
     def event_quit(self, event):
         '''Finish the main loop'''
         self.done = True
-    
-    def load_level(self, filename, num):
+
+    def load_level(self, f):
         '''Loads the chosen map for a needed amount of players'''
-        self.players_alive=num
-        with open(filename) as f:
-            self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
-            self.side=min((self.screen_height//self.height,self.screen_width//self.width))
-            self._absw = (self.screen_width-(self.width*self.side))//2
-            self._absh = (self.screen_height-(self.height*self.side))//2
-            for row_num, row in enumerate(f):
-                if row_num == self.height: raise RuntimeError('Too many lines in the file')
-                for col_num, col in enumerate(row.strip()):
-                    if col_num == self.width: raise RuntimeError('Too many colums in row %d'%row_num+1)
-                    if col == 'W':
-                        Wall(self, col_num, row_num, groups=(self.all, self.obstacles, self.walls))
-                    elif col == 'B':
-                        Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles, self.destroyable))
-                    elif col == ' ': 
-                        pass
-                    elif col=='S':
-                            self.available.append((col_num,row_num))
-                    else:
-                        raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
-                if col_num<self.width-1:
-                    raise RuntimeError('Insuficient number of colums in row %d'%row_num+1)
-            if row_num<self.height-1:
-                raise RuntimeError('Insuficient number of rows')
-        #Random generating of places where players may appear
-        self.players=[None]*10
-        for x in range(num):
-            while self.players[x] is None:
-                y=random.choice(self.available)
-                self.available.remove(y)
-                self.players[x]=Player(self, y[0], y[1], x, groups=(self.all, self.dynamic, self.destroyable, self.gamers))
-        self.controller = controllers.LocalController(self.players[0],self.players[1])
-        
+        self.available=[]
+        self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
+        self.side=min((self.screen_height//self.height,self.screen_width//self.width))
+        self._absw = (self.screen_width-(self.width*self.side))//2
+        self._absh = (self.screen_height-(self.height*self.side))//2
+        for row_num, row in enumerate(f):
+            if row_num == self.height: raise RuntimeError('Too many lines in the file')
+            for col_num, col in enumerate(row.strip()):
+                if col_num == self.width: raise RuntimeError('Too many colums in row %d'%row_num+1)
+                if col == 'W':
+                    Wall(self, col_num, row_num, groups=(self.all, self.obstacles, self.walls))
+                elif col == 'B':
+                    Box(self, col_num, row_num, groups=(self.all, self.dynamic, self.obstacles, self.destroyable))
+                elif col == ' ': 
+                    pass
+                elif col=='S':
+                        self.available.append((col_num,row_num))
+                else:
+                    raise RuntimeError('Unknown symbol "%s" in row %d, col %d'%(col, row_num+1, col_num+1))
+            if col_num<self.width-1:
+                raise RuntimeError('Insuficient number of colums in row %d'%row_num+1)
+        if row_num<self.height-1:
+            raise RuntimeError('Insuficient number of rows')
+        random.shuffle(self.available)
+        self.players = []
+        for i in range(self.num_players):
+            self.players.append(Player(self, self.available[i][0], self.available[i][1], i, groups=(self.all, self.destroyable)))
+
+    def start_local_game(self, level):
+        self.num_players = 2
+        self.load_level(open(level))
+        self.controller = controllers.LocalController(*self.players)
+        self.players_alive = 2
+
+    def end_game(self):
+        if self.is_network_game:
+            connection.Close()
+        for obj in self.all:
+            obj.unregister_all_event_handlers()
+        self.create_groups()
+        Score(self)
+
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
         return self._absw+x*self.side
@@ -140,14 +142,19 @@ class Game(events.AutoListeningObject):
         self.obstacles = pygame.sprite.Group()
         self.dynamic = pygame.sprite.Group() 
         self.bombs = pygame.sprite.Group()
-        self.gamers = pygame.sprite.Group()
         self.destroyable = pygame.sprite.Group()
         self.walls = pygame.sprite.Group()
         self.bonuses = pygame.sprite.Group()
-        self.players_available = 0
-        self.available=[]
-        self.players_alive=2
-        
+
+    def Network_start_game(self, data):
+        self.is_network_game = True
+        random.seed(data['random_seed'])
+        self.player_id = data['player_id']
+        self.num_players = data['num_players']
+        self.load_level(StringIO(data['level']))
+        self.controller = controllers.NetworkController(self.players[self.player_id])
+        self.players_alive = self.num_players
+
     def redraw(self):
         """Redraws the level. It is called each core pumb"""
         #self.surface.blit(self.ground, (0,0))
@@ -158,14 +165,23 @@ class Game(events.AutoListeningObject):
         '''Updates all the objects on the level'''
         self.all.update()
         if self.is_network_game:
-            self.connection.pump()
+            connection.Pump()
             if self.is_server:
-                self.server.pump()
+                self.server.Pump()
 
     def start_server(self):
-        self.server = controllers.GameServer(localaddr=('0.0.0.0', self.config['server']['port']))
+        self.active_players = [] # for displaying in the network menu
+        self.server = controllers.GameServer(self, localaddr=('0.0.0.0', self.config['server']['port']))
         self.is_network_game = True
         self.is_server = True
+        self.Connect(('localhost', self.config['server']['port']))
+
+    def Network_error(self, data):
+        ErrorMenu(self, data['error'][1])
+        connection.Close()
+
+    def Network_disconnected(self, data):
+        ErrorMenu(self, data)
 
     @classmethod
     def instance(cls):
@@ -174,4 +190,5 @@ class Game(events.AutoListeningObject):
         return cls._instance
 
 if __name__=="__main__":
+    #sys.stderr = open('stderr.txt', 'w')
     Game.instance().main_loop()
