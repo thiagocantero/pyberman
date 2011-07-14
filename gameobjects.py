@@ -378,6 +378,8 @@ class Player(GameObject, ConnectionListener):
         self.can_move_bombs=False
         self.temp_speed = self.temp_radius = None
         self.bad_speed, self.bad_radius=None, None
+        self.steps=[]
+        self.moving=False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
         if Player.player_images == None: self.create_images()
         self.image = Player.player_images[id][0][0]
@@ -407,39 +409,39 @@ class Player(GameObject, ConnectionListener):
 
     def go_up(self):
         self.dest = (0, -1)
+        self.moving = True
         self.cur_line = 3
-        if self.game.is_network_game:
-            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-
+        
     def go_down(self):
         self.dest = (0, 1)
+        self.moving = True
         self.cur_line = 0
-        if self.game.is_network_game:
-            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-
+        
     def go_left(self):
         self.dest = (-1, 0)
+        self.moving = True
         self.cur_line = 1
-        if self.game.is_network_game:
-            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-
+        
     def go_right(self):
         self.dest = (1, 0)
+        self.moving = True
         self.cur_line = 2
-        if self.game.is_network_game:
-            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-
+        
     def step(self):
         if self.dest!=None:
             if self.time_moving==0:
+                if self.moving: 
+                        self.steps.append(self.dest)
+                        if self.game.is_network_game:
+                            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
                 self.time_moving = self.game.step_length/self.speed
-                self.cur_dest=[self.dest[0]*self.speed,self.dest[1]*self.speed]
+                self.cur_dest=[self.steps[0][0]*self.speed,self.steps[0][1]*self.speed]
+                self.steps=self.steps[1:]
 
     def stop(self):
         self.dest=None
-        if self.game.is_network_game:
-            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-
+        self.moving=False
+        
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if not pygame.sprite.spritecollide(self,self.game.bombs,False):
@@ -457,6 +459,7 @@ class Player(GameObject, ConnectionListener):
     def Network_moved(self, data):
         if not data['player_id']==self.id:
             return
+        self.steps.append(data['dest'])
         self.dest = data['dest']
         self.cur_line = data['cur_line']
 
