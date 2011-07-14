@@ -12,7 +12,7 @@ import pygame
 from pygame.locals import *
 from PodSixNet.Connection import connection, ConnectionListener
 from gameobjects import *
-from ui import MainMenu, Score, ErrorMenu
+from ui import MainMenu, Score, NetworkScore, ErrorMenu
 import events
 import controllers
 
@@ -76,6 +76,8 @@ class Game(events.AutoListeningObject, ConnectionListener):
     def event_keydown(self, event):
         if event.key==K_ESCAPE:
             event.stop_propagating = True
+            for x in self.all:
+                x.kill()
             self.create_groups()
             MainMenu(self)
             #events.Event.process_event(events.QuitEvent(self))
@@ -87,6 +89,7 @@ class Game(events.AutoListeningObject, ConnectionListener):
     def load_level(self, f):
         '''Loads the chosen map for a needed amount of players'''
         GameObject.invalidate_cache()
+        Player.player_images = None
         self.available=[]
         self.height,self.width,self.max_players = [int(x) for x in f.readline().split()]
         self.side=min((self.screen_height//self.height,self.screen_width//self.width))
@@ -122,12 +125,14 @@ class Game(events.AutoListeningObject, ConnectionListener):
         self.players_alive = 2
 
     def end_game(self):
-        if self.is_network_game:
-            connection.Close()
         for obj in self.all:
             obj.unregister_all_event_handlers()
         self.create_groups()
-        Score(self)
+        if self.is_network_game:
+            connection.Close()
+            NetworkScore(self)
+        else:
+            Score(self)
 
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
