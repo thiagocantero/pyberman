@@ -75,7 +75,7 @@ class NetworkController(events.AutoListeningObject):
 
 class ClientChannel(Channel):
     def Network(self, data):
-        self._server.send_to_all(data)
+        self._server.send_to_all(data, exclude=self)
 
 class GameServer(Server):
     channelClass = ClientChannel
@@ -94,9 +94,10 @@ class GameServer(Server):
         self._max_player_id+=1
         self.game.active_players.append("%d: from %s"%(channel.player_id+1, addr))
 
-    def send_to_all(self, data):
+    def send_to_all(self, data, exclude=None):
         for channel in self.channels:
-            channel.Send(data)
+            if channel is not exclude:
+                channel.Send(data)
 
     def start_game(self, level):
         for player in self.channels:
