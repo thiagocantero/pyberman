@@ -18,7 +18,7 @@ class TextBox(GameObject):
         super(TextBox, self).__init__(game, 0, 0, groups=[game.all])
         self.background = self.load_image('menu.jpg')
         self.image=pygame.Surface((self.width,self.height))
-        self.text_font = pygame.font.Font(None, self.text_size)
+        self.text_font = pygame.font.Font(os.path.join('Data', 'freesansbold.ttf'), self.text_size)
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
 
         #46.30.167.198
