@@ -8,6 +8,7 @@ from gameobjects import GameObject
 import events
 
 class TextBox(GameObject):
+    '''Basic class, which shows text lines and a title on a game screen'''
     def __init__(self, game, title, strings):
         self.strings=strings
         self.title  = title
@@ -20,6 +21,7 @@ class TextBox(GameObject):
         self.text_font = pygame.font.Font(None, self.text_size)
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
 
+        #46.30.167.198
     @property
     def width(self):
         return self.game.screen_width
@@ -132,7 +134,7 @@ class MainMenu(Menu):
         
 
 class ChooseLevelMenu(Menu):
-    '''This menu is shown on a game startup'''
+    '''This menu is shown when it comes to choosing the level'''
     def __init__(self, game, players):
         self.list_of_good_maps=[]
         self.file_names = []
@@ -197,7 +199,7 @@ class SettingsMenu(Menu):
         
         
 class MusicMenu(Menu):
-    '''This menu is a settings menu'''
+    '''This menu is a settings menu for musical settings'''
     def __init__(self, game):
         self.game=game
         self.vol=1.0
@@ -226,7 +228,7 @@ class Score(Menu):
         self.game=game
         self.items=(
             ('Continue', self.start_local_game), 
-            ('MainMenu', self.quit)
+            ('MainMenu', self.quit),
         )
         self.strings=[]
         for player in self.game.players:
@@ -253,12 +255,39 @@ class Score(Menu):
     def quit(self):
         self.kill()
         MainMenu(self.game)
-        
 
+
+class NetworkScore(Menu):
+    '''Shows score after the game''' 
+    def __init__(self, game):
+        self.game=game
+        self.items=(
+            ('MainMenu', self.quit),
+        )
+        self.strings=[]
+        for player in self.game.players:
+            if player is not None:
+                self.strings.append('%s        %s'%(self.game.player_names[player.id], self.game.players_score[player.id]))
+        super(NetworkScore, self).__init__(self.game, self.items, 'Score', self.strings) 
+
+    def update(self):
+        self.image.blit(self.background,(0,0))
+        self.image.blit(self.rendered_title,((self.width-self.rendered_title.get_width())//2,self.text_size))
+        
+        for number,text in enumerate(self.strings):
+            self.image.blit(self.text_font.render(text, True, self.game.players_colors[number]),(self.width//2,self.abs_height+number*self.text_size))
+        
+        for number,(text,func) in enumerate(self.str_func):
+            if number==self.current: self.image.blit(self.text_font.render(text, True, (0,255,0)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
+            else: self.image.blit(self.text_font.render(text, True, (0,154,205)),(self.width//2,self.abs_height+(super(Menu,self).lines_count+number)*self.text_size))
+    
+    def quit(self):
+        self.kill()
+        MainMenu(self.game)
+
+        
 class EditBox(TextBox):
-    '''Shows the list of text items on the screen allowing to choose any from mouse or keyboard 
-        It's a class which is responsible for creating GameObject called Menu, which will
-        be showed on the screen in the main loop
+    '''Shows the editbox, which can be used for the input of information 
     '''
     def __init__(self, game, inp , title, strings=None):
         '''@param inp: inp is parametr which we want to change    @type inp:str
@@ -302,9 +331,10 @@ class EditBox(TextBox):
             self.cur_pos+=1
         
 class ChoosePlayerName(EditBox):
-    '''This menu is shown on a game startup'''
+    '''This editbox is used to complete the information about players'''
     def __init__(self, game, id):
         self.id=id
+        self.game = game
         super(ChoosePlayerName, self).__init__(game, self.game.player_names[id], 'Player Naming', ['Choose the name of the player'])
 
     def func(self):
@@ -313,6 +343,7 @@ class ChoosePlayerName(EditBox):
         SettingsMenu(self.game)
 
 class NetworkMenu(Menu):
+    '''This menu is used for creating a network game'''
     def __init__(self, game):
         self.items=(
             ('Start Game', self.start_game), 
@@ -331,6 +362,7 @@ class NetworkMenu(Menu):
         MainMenu(self.game)
 
 class EnterIPBox(EditBox):
+    '''This editbox is used for joining the server'''
     def __init__(self, game):
         super(EnterIPBox, self).__init__(game, '192.168.1.1', 'Server IP', ['Enter server IP:'])
 
@@ -345,12 +377,14 @@ class EnterIPBox(EditBox):
             self.inp = 'Incorrect value!'
             return
         self.kill()
+        self.game.inp=self.inp
         self.game.is_network_game = True
         self.game.Connect((self.inp, self.game.config['server']['port']))
         self.game._waitbox = WaitBox(self.game)
 
 
 class ErrorMenu(Menu):
+    '''This menu is shown if there are some problems with the connection'''
     def __init__(self, game, error):
         self.items = (
             ('Back', self.back),
@@ -362,6 +396,7 @@ class ErrorMenu(Menu):
 
 
 class ChooseLevelNetworkMenu(ChooseLevelMenu):
+    '''This menu allows to choose level for the network game'''
     def back(self):
         self.kill()
         NetworkMenu(self.game)
@@ -372,6 +407,7 @@ class ChooseLevelNetworkMenu(ChooseLevelMenu):
 
 
 class WaitBox(Menu):
+    '''This Menu is shown while player is waiting for the network game start'''
     def __init__(self, game):
         self.items = (
             ('Back', self.back),

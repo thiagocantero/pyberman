@@ -309,9 +309,9 @@ class Bomb(GameObject):
 
 
 class Fire(GameObject):
+    '''The class representing the fire which appears straight after the bomb explosion'''
     image_files = ['fire.jpg']
 
-    '''The class representing the fire which appears straight after the bomb explosion'''
     def __init__(self, game, player, x, y, *args, **kwargs):
         self.player, self.game, self.x, self.y =player, game, x, y
         self.time = 1
@@ -433,11 +433,12 @@ class Player(GameObject, ConnectionListener):
                 if self.moving: 
                         self.steps.append(self.dest)
                         if self.game.is_network_game:
-                            self.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-                self.time_moving = self.game.step_length/self.speed
-                self.cur_dest=[self.steps[0][0]*self.speed,self.steps[0][1]*self.speed]
-                self.steps=self.steps[1:]
-
+                            connection.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
+                if self.steps:
+                    self.time_moving = self.game.step_length/self.speed
+                    self.cur_dest=(self.steps[0][0]*self.speed,self.steps[0][1]*self.speed)
+                    self.steps=self.steps[1:]
+                
     def stop(self):
         self.dest=None
         self.moving=False
@@ -455,7 +456,7 @@ class Player(GameObject, ConnectionListener):
         if not data['player_id']==self.id:
             return
         self.put_bomb()
-
+        
     def Network_moved(self, data):
         if not data['player_id']==self.id:
             return
