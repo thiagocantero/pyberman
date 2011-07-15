@@ -1,5 +1,6 @@
 import glob
 import os
+import socket
 import sys
 import pygame
 from pygame.locals import *
@@ -21,7 +22,6 @@ class TextBox(GameObject):
         self.text_font = pygame.font.Font(os.path.join('Data', 'freesansbold.ttf'), self.text_size)
         self.rendered_title=self.text_font.render(self.title, True, (255,0,0))
 
-        #46.30.167.198
     @property
     def width(self):
         return self.game.screen_width
@@ -350,12 +350,13 @@ class NetworkMenu(Menu):
             ('Back', self.back)
         )
         self.game=game
+        game.active_players.append("Your local IP: "+socket.gethostbyname(socket.gethostname()))
         super(NetworkMenu, self).__init__(game, self.items, 'Waiting for players...', self.game.active_players)
 
     def start_game(self):
-        if self.game.server._max_player_id>1:
+        if self.game.server.num_players>1:
             self.kill()
-            ChooseLevelNetworkMenu(self.game, self.game.server._max_player_id)
+            ChooseLevelNetworkMenu(self.game, self.game.server.num_players)
 
     def back(self):
         self.kill()

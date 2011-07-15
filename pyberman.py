@@ -127,12 +127,15 @@ class Game(events.AutoListeningObject, ConnectionListener):
     def end_game(self):
         for obj in self.all:
             obj.unregister_all_event_handlers()
+            if not isinstance(obj, Player):
+                obj.kill()
         self.create_groups()
         if self.is_network_game:
             connection.Close()
             NetworkScore(self)
         else:
             Score(self)
+        self.is_network_game = self.is_server = False
 
     def xcoord_to_screen(self, x):
         '''Translates given x coordinate from the game coord system to screen coord system.'''
@@ -201,5 +204,5 @@ class Game(events.AutoListeningObject, ConnectionListener):
         return cls._instance
 
 if __name__=="__main__":
-    #sys.stderr = open('stderr.txt', 'w')
+    sys.stderr = open('stderr.txt', 'w')
     Game.instance().main_loop()
