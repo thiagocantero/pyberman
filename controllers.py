@@ -31,7 +31,7 @@ class LocalController(events.AutoListeningObject):
             K_LCTRL:self.player2.put_bomb
         }
         super(LocalController, self).__init__()
-    
+
     def event_keydown(self, event):
         '''Manages to use the key down until it is released'''
         func = self.actions.get(event.key, None)
@@ -77,6 +77,9 @@ class ClientChannel(Channel):
     def Network(self, data):
         self._server.send_to_all(data, exclude=self)
 
+    def Close(self):
+        self._server.num_players-=1
+
 class GameServer(Server):
     channelClass = ClientChannel
 
@@ -84,15 +87,14 @@ class GameServer(Server):
         self.game = game
         Server.__init__(self, *args, **kwargs)
         self.game_started = False
-        self._max_player_id = 0
+        self.num_players = 0
 
     def Connected(self, channel, addr):
         if self.game_started:
             channel.close_when_done()
             return 
-        channel.player_id = self._max_player_id
-        self._max_player_id+=1
-        self.game.active_players.append("%d: from %s"%(channel.player_id+1, addr))
+        self.num_players+=1
+        self.game.active_players.append("%d: from %s"%(self.num_players, addr[0]))
 
     def send_to_all(self, data, exclude=None):
         for channel in self.channels:
@@ -100,6 +102,6 @@ class GameServer(Server):
                 channel.Send(data)
 
     def start_game(self, level):
-        for player in self.channels:
-            player.Send({'action': 'start_game', 'level': level, 'player_id': player.player_id, 'num_players': self._max_player_id, 'random_seed': int(time.time())})
+        for id, player in enumerate(self.channels):
+            player.Send({'action': 'start_game', 'level': level, 'player_id': id, 'num_players': self.num_players, 'random_seed': int(time.time())})
         self.game_started = True

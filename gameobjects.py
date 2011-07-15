@@ -3,6 +3,7 @@
 
 '''Game objects.'''
 
+from collections import namedtuple
 import os
 from weakref import WeakSet 
 import random
@@ -11,7 +12,7 @@ from PodSixNet.Connection import connection, ConnectionListener
 import events
 
 IMAGE_DIR = "Data"
-
+StepRecord=namedtuple('step_record', ('dest', 'cur_line'))
 class GameObject(pygame.sprite.Sprite, events.AutoListeningObject):
     '''The base class for all visible entities in the game, which implements generic operations.
     See the base class documentation at http://pygame.org/docs/ref/sprite.html#pygame.sprite
@@ -242,10 +243,11 @@ class Bomb(GameObject):
             return True
         else:
             if player.can_move_bombs:
-                if player.cur_dest!=None:
-                    self.dest=player.cur_dest[:]
-                else: self.dest=None
-                return True
+                if player.steps:
+                    self.dest=tuple(player.steps[0].dest)
+                else:
+                    self.dest = None
+                return False
             else:
                 self.dest=None
                 return False
@@ -255,7 +257,7 @@ class Bomb(GameObject):
             self.player_first_stands = False
 
     def collide_Fire(self, fire):
-        self.kill()
+        self.explode()
         return False
 
     def collide_Bomb(self, bomb):
@@ -282,15 +284,9 @@ class Bomb(GameObject):
         '''Checks if fire can move futher'''
         ret=False
         fire=Fire(self.game,self.player,dx,dy,groups=(self.game.all,self.game.dynamic))
-        destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,True)
-        if len(destroyed)!=0:
-            for obj in destroyed:
-                if isinstance(obj,Bomb):
-                    obj.explode()
-                elif isinstance(obj,Box):
-                    obj.collide_Fire(fire)
-                elif isinstance(obj,Player):
-                    obj.collide_Fire(fire)
+        destroyed=pygame.sprite.spritecollide(fire,self.game.destroyable,False)
+        for obj in destroyed:
+            obj.collide(fire)
             ret=True
         if len(pygame.sprite.spritecollide(fire,self.game.walls,False))>0: 
             fire.kill()
@@ -357,8 +353,9 @@ class Box(Wall):
         #Only good bonuses by now
         w=random.choice([SpeedUpBonus,AddBombBonus,MoveBombsBonus,IncreaseRadiusBonus, ExchangePlacesBonus, ReduceRadiusBonus, SpeedDownBonus,IncreaseRadiusBonus,SpeedUpBonus,AddBombBonus])
         if x: w(self.game,self.x,self.y,[self.game.all,self.game.destroyable,self.game.bonuses])
+        self.kill()
         return False
-    
+
     def collide_Player(self, player):
         return False 
 
@@ -368,7 +365,6 @@ class Box(Wall):
 
 class Player(GameObject, ConnectionListener):
     '''Represents a player in the game.'''
-    player_images = None
 
     def __init__(self, game, x, y, id, *args, **kwargs):
         self.id = id
@@ -377,97 +373,105 @@ class Player(GameObject, ConnectionListener):
         self.dest = self.cur_dest = None
         self.can_move_bombs=False
         self.temp_speed = self.temp_radius = None
-        self.bad_speed, self.bad_radius=None, None
+        self.bad_speed = self.bad_radius=None
         self.steps=[]
-        self.moving=False
+        self.moving = False
         super(Player, self).__init__(game, x,y, *args, **kwargs)
-        if Player.player_images == None: self.create_images()
+        self.create_images()
         self.image = Player.player_images[id][0][0]
 
     def collide_Player(self, player):
         return True #Player can move further
 
     def collide_Fire(self, fire):
-        self.game.players_alive-=1
-        if self is fire.player: 
-            self.game.players_score[self.id]-=1
-        else: self.game.players_score[fire.player.id]+=1
-        self.kill()
-        return True
+        if self.game.is_network_game:
+            if self.game.is_server:
+                connection.Send({'action': 'fire', 'player_id': self.id, 'fire_player_id': fire.player.id})
+                connection.Pump()
+                self.game.server.Pump()
+                self.fire(fire.player.id)
+        else:
+            self.fire(fire.player.id)
+        return False
 
     def create_images(self):
         Player.player_images = [dirs for dirs in os.listdir(os.path.join('Data','players'))]
         for dirs in os.listdir(os.path.join('Data','players')):
-            Player.player_images[self.cur_line] = [dir for dir in sorted(os.listdir(os.path.join('Data','players',dirs)))]
+            self.player_images[self.cur_line] = [dir for dir in sorted(os.listdir(os.path.join('Data','players',dirs)))]
             for dir in os.listdir(os.path.join('Data','players',dirs)):
-                Player.player_images[self.cur_line][self.cur_pic] = [self.load_image(os.path.join('players',dirs,dir,filename)) for filename in os.listdir(os.path.join('Data','players',dirs,dir))]
+                self.player_images[self.cur_line][self.cur_pic] = [self.load_image(os.path.join('players',dirs,dir,filename)) for filename in os.listdir(os.path.join('Data','players',dirs,dir))]
                 self.cur_pic += 1
             self.cur_line += 1
             self.cur_pic = 0
-        self.line = 0
-        self.pic = 0
+        self.cur_line = 0
+
+    def add_step(self, step_record):
+        self.moving = True
+        self.steps.append(step_record)
+        if self.game.is_network_game:
+            connection.Send({'action': 'step', 'dest': step_record.dest, 'cur_line': step_record.cur_line, 'x': self.x, 'y': self.y, 'player_id': self.id})
+        self.last_step = step_record
+
+    def stop(self):
+        self.moving = False
 
     def go_up(self):
-        self.dest = (0, -1)
-        self.moving = True
-        self.cur_line = 3
-        
+        self.add_step(StepRecord((0, -1), 3))
+
     def go_down(self):
-        self.dest = (0, 1)
-        self.moving = True
-        self.cur_line = 0
-        
+        self.add_step(StepRecord((0, 1), 0))
+
     def go_left(self):
-        self.dest = (-1, 0)
-        self.moving = True
-        self.cur_line = 1
-        
+        self.add_step(StepRecord((-1, 0), 1))
+
     def go_right(self):
-        self.dest = (1, 0)
-        self.moving = True
-        self.cur_line = 2
-        
-    def step(self):
-        if self.dest!=None:
-            if self.time_moving==0:
-                if self.moving: 
-                        self.steps.append(self.dest)
-                        if self.game.is_network_game:
-                            connection.Send({'action': 'moved', 'player_id': self.id, 'dest': self.dest, 'cur_line': self.cur_line})
-                if self.steps:
-                    self.time_moving = self.game.step_length/self.speed
-                    self.cur_dest=(self.steps[0][0]*self.speed,self.steps[0][1]*self.speed)
-                    self.steps=self.steps[1:]
-                
-    def stop(self):
-        self.dest=None
-        self.moving=False
-        
+        self.add_step(StepRecord((1, 0), 2))
+
+    def perform_step(self):
+        if self.time_moving>0: # step in progress
+            d=min(self.time_moving,self.game.delta)
+            self.time_moving-=d
+            self.cur_line = self.steps[0].cur_line
+            self.move(self.steps[0].dest[0]*d*self.speed, self.steps[0].dest[1]*d*self.speed)
+            self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line]) # let the animation go
+            if self.time_moving == 0: #end of the current step
+                del self.steps[0]
+        if self.time_moving == 0 and self.steps: # we have steps in the queue
+            self.time_moving = self.game.step_length/self.speed
+
     def put_bomb(self):
         '''Current player puts the bomb if he has the one'''
         if not pygame.sprite.spritecollide(self,self.game.bombs,False):
             if self.bombs>0:
                 if self.game.is_network_game:
-                    connection.Send({'action': 'put_bomb', 'player_id': self.id})
+                    connection.Send({'action': 'put_bomb', 'player_id': self.id, 'x': self.x, 'y': self.y})
                 self.bombs-=1
                 Bomb(self,self.game,round(self.x),round(self.y),groups=(self.game.all,self.game.bombs,self.game.destroyable))
 
     def Network_put_bomb(self, data):
         if not data['player_id']==self.id:
             return
+            self.x = data['x']
+            self.y = data['y']
         self.put_bomb()
-        
-    def Network_moved(self, data):
+
+    def Network_step(self, data):
         if not data['player_id']==self.id:
             return
-        self.steps.append(data['dest'])
-        self.dest = data['dest']
-        self.cur_line = data['cur_line']
+        #self.steps = []
+        self.time_moving = self.game.step_length/self.speed
+        self.steps.append(StepRecord(data['dest'], data['cur_line']))
+        self.x = data['x']
+        self.y = data['y']
 
     def update(self):
-        '''Moves player to his destination and checks whether he accepted any bonuses'''
         self.Pump()
-        self.step()
+        self.update_rect()
+        self.perform_step()
+        if self.moving and not self.steps:
+            self.add_step(self.last_step)
+        elif not self.moving and not self.steps:
+            self.cur_line = self.cur_pic = 0 #stop the animation
         if self.temp_speed is not None:
             self.bad_speed-=self.game.delta
             if self.bad_speed<0:
@@ -478,21 +482,35 @@ class Player(GameObject, ConnectionListener):
             if self.bad_radius<0:
                 self.radius=self.temp_radius
                 self.temp_radius=None
-        if self.dest != None:
-            d=min(self.time_moving,self.game.delta)
-            self.time_moving-=d
-            self.move(self.cur_dest[0]*d,self.cur_dest[1]*d)    
-            self.cur_pic = (self.cur_pic + 1)% len(Player.player_images[self.id][self.cur_line])
-            self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
-        else:
-            self.image = Player.player_images[self.id][0][0]
+        self.image = Player.player_images[self.id][self.cur_line][self.cur_pic]
 
     def move_up_to(self):
         '''Function for truncating the player added for easier getting to the position'''
         self.x=round(self.x)
         self.y=round(self.y)
 
+    def Network_fire(self, data):
+        if not data['player_id']==self.id:
+            return
+        self.fire(data['fire_player_id'])
+
+    def fire(self, fire_player_id):
+        self.game.players_alive-=1
+        if self.id == fire_player_id: 
+            self.game.players_score[self.id]-=1
+        else: 
+            self.game.players_score[fire_player_id]+=1
+        self.kill()
+
     def kill(self):
         if self.game.players_alive<2:
             self.game.end_game()
         super(Player, self).kill()
+
+    @property
+    def width(self):
+        return self.game.side-2
+
+    @property
+    def height(self):
+        return self.game.side-2
